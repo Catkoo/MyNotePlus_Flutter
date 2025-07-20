@@ -46,3 +46,4 @@ app.*.map.json
 
 build/app/outputs/flutter-apk/app-release.apk
 android/app/google-services.json
+lib/firebase_options.dart
