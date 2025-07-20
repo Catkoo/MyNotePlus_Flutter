@@ -32,13 +32,15 @@ Aplikasi catatan pribadi dan film/drama yang modern, ringan, dan praktis. Dibuat
 
 > ⚠️ **Perhatian:**
 > - APK ini dapat berubah setiap kali ada pembaruan fitur atau perbaikan bug.
+> - **Dibuat Khusus Android Aja**
+> - **Download Versi .apk Saja**
 > - **Selalu cek versi terbaru di link ini.**
 
 ---
 
 ## 📥 Cara Clone Project
 ```bash
-git clone https://github.com/yourusername/mynoteplus.git
+git clone https://github.com/Catkoo/MyNotePlus_Flutter.git
 cd mynoteplus
 flutter pub get
 flutter run
