@@ -44,4 +44,5 @@ app.*.map.json
 /android/app/profile
 /android/app/release
 
+build/app/outputs/flutter-apk/app-release.apk
 android/app/google-services.json
