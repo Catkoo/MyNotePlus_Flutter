@@ -46,7 +46,7 @@ flutter run
 ---
 
 ## 🧑‍💻 Developer
-- Richard Khoo – [GitHub](https://github.com/Catkoo) | [LinkedIn](https://www.linkedin.com/in/catkoo/)
+- Richard Khoo – [GitHub](https://github.com/Catkoo) | [LinkedIn](https://www.linkedin.com/in/catkoo/) |
 [Website](https://richard-khoo.vercel.app)
 
 ---
