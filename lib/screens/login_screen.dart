@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:provider/provider.dart'; // ✅ penting untuk akses ViewModel
+import '../viewmodel/note_view_model.dart'; // ✅ pastikan ini diimpor
+import '../viewmodel/film_note_viewmodel.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key});
@@ -64,6 +67,14 @@ class _LoginScreenState extends State<LoginScreen> {
         final prefs = await SharedPreferences.getInstance();
         prefs.setInt('lastLogin', DateTime.now().millisecondsSinceEpoch);
 
+        // ✅ Tambahan penting: clear viewmodel lama sebelum pindah ke home
+        if (mounted) {
+          final noteVM = context.read<NoteViewModel>();
+          final filmVM = context.read<FilmNoteViewModel>();
+          noteVM.clear();
+          filmVM.clear();
+        }
+
         _showToast("Login berhasil");
         Navigator.pushReplacementNamed(context, '/home');
       } else {
@@ -103,15 +114,12 @@ class _LoginScreenState extends State<LoginScreen> {
             child: Column(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                // Logo atau ikon besar
                 const Icon(
                   Icons.note_alt_outlined,
                   size: 64,
                   color: Colors.indigo,
                 ),
-
                 const SizedBox(height: 24),
-
                 Text(
                   "Selamat Datang Kembali 👋",
                   style: GoogleFonts.poppins(
@@ -120,9 +128,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Colors.indigo[800],
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 Text(
                   "Login untuk melanjutkan",
                   style: GoogleFonts.poppins(
@@ -130,9 +136,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     color: Colors.grey[600],
                   ),
                 ),
-
                 const SizedBox(height: 32),
-
                 TextField(
                   controller: _emailController,
                   keyboardType: TextInputType.emailAddress,
@@ -147,7 +151,6 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
                 const SizedBox(height: 16),
-
                 TextField(
                   controller: _passwordController,
                   obscureText: !_passwordVisible,
@@ -170,9 +173,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     fillColor: Colors.white,
                   ),
                 ),
-
                 const SizedBox(height: 8),
-
                 Align(
                   alignment: Alignment.centerRight,
                   child: TextButton(
@@ -180,9 +181,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     child: const Text("Lupa password?"),
                   ),
                 ),
-
                 const SizedBox(height: 16),
-
                 SizedBox(
                   width: double.infinity,
                   height: 48,
@@ -211,9 +210,7 @@ class _LoginScreenState extends State<LoginScreen> {
                     ),
                   ),
                 ),
-
                 const SizedBox(height: 24),
-
                 TextButton(
                   onPressed: () => Navigator.pushNamed(context, '/register'),
                   child: const Text("Belum punya akun? Daftar di sini"),

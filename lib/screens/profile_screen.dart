@@ -1,9 +1,12 @@
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
+import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../screens/change_email_dialog.dart';
 import '../screens/change_password_dialog.dart';
+import '../viewmodel/note_view_model.dart';
+import '../viewmodel/film_note_viewmodel.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -50,9 +53,19 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _logout() {
-    FirebaseAuth.instance.signOut();
-    Navigator.pushReplacementNamed(context, '/login');
+  void _logout() async {
+    // Bersihkan data dan listener
+    context.read<NoteViewModel>().clear();
+    context.read<FilmNoteViewModel>().clear();
+
+    await FirebaseAuth.instance.signOut();
+
+    if (mounted) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Berhasil logout')));
+      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+    }
   }
 
   void _openHelpForm() async {
@@ -60,9 +73,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
     if (await canLaunchUrl(Uri.parse(url))) {
       await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
     } else {
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Segera Hadir')),
-      );
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(const SnackBar(content: Text('Segera Hadir')));
     }
   }
 

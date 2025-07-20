@@ -57,28 +57,32 @@ class FilmNoteViewModel extends ChangeNotifier {
     return null;
   }
 
-  void startFilmNoteListener() {
-    if (_isListening) return;
+void startFilmNoteListener() {
+  final uid = FirebaseAuth.instance.currentUser?.uid;
+  if (uid == null) return;
 
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+  _db
+      .collection('users')
+      .doc(uid)
+      .collection('film_notes')
+      .orderBy('title')
+      .snapshots()
+      .listen((snapshot) {
+        _filmNotes.clear();
+        for (final doc in snapshot.docs) {
+          final note = FilmNote.fromMap(doc.data(), doc.id);
+          _filmNotes.add(note);
+        }
+        debugPrint('🎬 FilmNote listener: ${_filmNotes.length} item');
+        notifyListeners();
+      });
 
-    _isListening = true;
+  _isListening = true;
 
-    _db
-        .collection('users')
-        .doc(uid)
-        .collection('film_notes')
-        .orderBy('title')
-        .snapshots()
-        .listen((snapshot) {
-          _filmNotes.clear();
-          for (final doc in snapshot.docs) {
-            final note = FilmNote.fromMap(doc.data(), doc.id);
-            _filmNotes.add(note);
-          }
-          debugPrint('🎬 FilmNote listener: \${_filmNotes.length} item');
-          notifyListeners();
-        });
+  }
+  void clear() {
+    _filmNotes.clear();
+    _isListening = false;
+    notifyListeners();
   }
 }

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:package_info_plus/package_info_plus.dart';
 import 'package:provider/provider.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../viewmodel/note_view_model.dart';
 import '../viewmodel/film_note_viewmodel.dart';
 import 'profile_screen.dart';
@@ -26,12 +27,24 @@ class _HomeScreenState extends State<HomeScreen> {
   @override
   void initState() {
     super.initState();
-    _getVersionAndLoadConfig();
-    Provider.of<NoteViewModel>(context, listen: false).startNoteListener();
-    Provider.of<FilmNoteViewModel>(
-      context,
-      listen: false,
-    ).startFilmNoteListener();
+
+  WidgetsBinding.instance.addPostFrameCallback((_) {
+      final user = FirebaseAuth.instance.currentUser;
+      if (user != null) {
+        // Clear all previous data before listening
+        Provider.of<NoteViewModel>(context, listen: false).clear();
+        Provider.of<FilmNoteViewModel>(context, listen: false).clear();
+
+        // Start new listener
+        Provider.of<NoteViewModel>(context, listen: false).startNoteListener();
+        Provider.of<FilmNoteViewModel>(
+          context,
+          listen: false,
+        ).startFilmNoteListener();
+
+        _getVersionAndLoadConfig();
+      }
+    });
   }
 
   Future<void> _getVersionAndLoadConfig() async {

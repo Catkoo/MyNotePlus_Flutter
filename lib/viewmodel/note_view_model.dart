@@ -82,4 +82,11 @@ class NoteViewModel extends ChangeNotifier {
     _subscription?.cancel();
     super.dispose();
   }
+
+  void clear() {
+    _subscription?.cancel();
+    _notes.clear();
+    notifyListeners();
+  }
 }
+
