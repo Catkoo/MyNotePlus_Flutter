@@ -33,6 +33,15 @@ class _DetailNoteScreenState extends State<DetailNoteScreen> {
     }
   }
 
+  String formatSimpleDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString();
+    final year = (date.year % 100).toString().padLeft(2, '0');
+    final hour = date.hour.toString().padLeft(2, '0');
+    final minute = date.minute.toString().padLeft(2, '0');
+    return "$day $month $year $hour:$minute";
+  }
+
   @override
   Widget build(BuildContext context) {
     final viewModel = Provider.of<NoteViewModel>(context, listen: false);
@@ -47,6 +56,9 @@ class _DetailNoteScreenState extends State<DetailNoteScreen> {
       );
     }
 
+    final lastEdited = formatSimpleDate(note!.lastEdited);
+    final charCount = note!.content.replaceAll('\n', '').length;
+
     return Scaffold(
       appBar: AppBar(title: const Text("Detail Catatan")),
       body: Padding(
@@ -54,10 +66,30 @@ class _DetailNoteScreenState extends State<DetailNoteScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(note!.title, style: Theme.of(context).textTheme.headlineSmall),
-            const SizedBox(height: 12),
-            Text(note!.content),
-            const Spacer(),
+            Expanded(
+              child: SingleChildScrollView(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      note!.title,
+                      style: Theme.of(context).textTheme.headlineSmall,
+                    ),
+                    const SizedBox(height: 8),
+                    Text(
+                      "$lastEdited | $charCount karakter",
+                      style: TextStyle(color: Colors.grey[600], fontSize: 12),
+                    ),
+                    const SizedBox(height: 16),
+                    Text(
+                      note!.content,
+                      style: Theme.of(context).textTheme.bodyLarge,
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            const SizedBox(height: 16),
             Row(
               children: [
                 OutlinedButton.icon(

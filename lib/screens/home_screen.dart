@@ -151,86 +151,173 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 }
 
-class PersonalNotesContent extends StatelessWidget {
+class PersonalNotesContent extends StatefulWidget {
   const PersonalNotesContent({super.key});
+
+  @override
+  State<PersonalNotesContent> createState() => _PersonalNotesContentState();
+}
+
+class _PersonalNotesContentState extends State<PersonalNotesContent> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
 
   @override
   Widget build(BuildContext context) {
     return Consumer<NoteViewModel>(
       builder: (context, viewModel, _) {
-        final notes = viewModel.notes;
-        if (notes.isEmpty) {
-          return const Center(child: Text("Belum ada catatan."));
-        }
-        return ListView.builder(
-          itemCount: notes.length,
-          padding: const EdgeInsets.all(16),
-          itemBuilder: (context, index) {
-            final note = notes[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              elevation: 2,
-              child: ListTile(
-                title: Text(note.title),
-                subtitle: Text(
-                  note.content,
-                  maxLines: 2,
-                  overflow: TextOverflow.ellipsis,
+        final allNotes = viewModel.notes;
+        final filteredNotes =
+            allNotes
+                .where(
+                  (note) => note.title.toLowerCase().contains(
+                    _searchQuery.toLowerCase(),
+                  ),
+                )
+                .toList()
+              ..sort(
+                (a, b) => b.lastEdited.compareTo(a.lastEdited),
+              ); // Terbaru di atas
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _searchQuery = value),
+                decoration: InputDecoration(
+                  hintText: "Cari catatan...",
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/detail_note',
-                    arguments: note.id,
-                  );
-                },
               ),
-            );
-          },
+            ),
+            Expanded(
+              child: filteredNotes.isEmpty
+                  ? const Center(child: Text("Catatan tidak ditemukan."))
+                  : ListView.builder(
+                      itemCount: filteredNotes.length,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemBuilder: (context, index) {
+                        final note = filteredNotes[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          elevation: 2,
+                          child: ListTile(
+                            title: Text(note.title),
+                            subtitle: Text(
+                              note.content,
+                              maxLines: 2,
+                              overflow: TextOverflow.ellipsis,
+                            ),
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/detail_note',
+                                arguments: note.id,
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         );
       },
     );
   }
 }
 
-class FilmNotesContent extends StatelessWidget {
+class FilmNotesContent extends StatefulWidget {
   const FilmNotesContent({super.key});
+
+  @override
+  State<FilmNotesContent> createState() => _FilmNotesContentState();
+}
+
+class _FilmNotesContentState extends State<FilmNotesContent> {
+  final TextEditingController _searchController = TextEditingController();
+  String _searchQuery = "";
 
   @override
   Widget build(BuildContext context) {
     return Consumer<FilmNoteViewModel>(
       builder: (context, viewModel, _) {
-        final notes = viewModel.filmNotes;
-        if (notes.isEmpty) {
-          return const Center(child: Text("Belum ada catatan film."));
-        }
-        return ListView.builder(
-          itemCount: notes.length,
-          padding: const EdgeInsets.all(16),
-          itemBuilder: (context, index) {
-            final note = notes[index];
-            return Card(
-              margin: const EdgeInsets.symmetric(vertical: 8),
-              elevation: 2,
-              color: note.isFinished ? Colors.green[50] : null,
-              child: ListTile(
-                title: Text(note.title),
-                subtitle: Text(
-                  "Tahun: ${note.year}  •  Episode: ${note.episodeWatched}",
+        final allNotes = viewModel.filmNotes;
+        final filteredNotes =
+            allNotes
+                .where(
+                  (note) => note.title.toLowerCase().contains(
+                    _searchQuery.toLowerCase(),
+                  ),
+                )
+                .toList()
+              ..sort(
+                (a, b) => b.lastEdited.compareTo(a.lastEdited),
+              ); // Urutan terbaru
+
+        return Column(
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16),
+              child: TextField(
+                controller: _searchController,
+                onChanged: (value) => setState(() => _searchQuery = value),
+                decoration: InputDecoration(
+                  hintText: "Cari film/drama...",
+                  prefixIcon: const Icon(Icons.search),
+                  filled: true,
+                  fillColor: Colors.grey[100],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(12),
+                    borderSide: BorderSide.none,
+                  ),
                 ),
-                trailing: note.isFinished
-                    ? const Icon(Icons.check_circle, color: Colors.green)
-                    : null,
-                onTap: () {
-                  Navigator.pushNamed(
-                    context,
-                    '/detail_film_note',
-                    arguments: note.id,
-                  );
-                },
               ),
-            );
-          },
+            ),
+            Expanded(
+              child: filteredNotes.isEmpty
+                  ? const Center(child: Text("Film/drama tidak ditemukan."))
+                  : ListView.builder(
+                      itemCount: filteredNotes.length,
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      itemBuilder: (context, index) {
+                        final note = filteredNotes[index];
+                        return Card(
+                          margin: const EdgeInsets.symmetric(vertical: 8),
+                          elevation: 2,
+                          color: note.isFinished ? Colors.green[50] : null,
+                          child: ListTile(
+                            title: Text(note.title),
+                            subtitle: Text(
+                              "Tahun: ${note.year}  •  Episode: ${note.episodeWatched}",
+                            ),
+                            trailing: note.isFinished
+                                ? const Icon(
+                                    Icons.check_circle,
+                                    color: Colors.green,
+                                  )
+                                : null,
+                            onTap: () {
+                              Navigator.pushNamed(
+                                context,
+                                '/detail_film_note',
+                                arguments: note.id,
+                              );
+                            },
+                          ),
+                        );
+                      },
+                    ),
+            ),
+          ],
         );
       },
     );

@@ -1,3 +1,4 @@
+import 'dart:io';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:flutter/material.dart';
@@ -68,14 +69,48 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-  void _openHelpForm() async {
-    const url = 'https://forms.gle/#';
-    if (await canLaunchUrl(Uri.parse(url))) {
-      await launchUrl(Uri.parse(url), mode: LaunchMode.externalApplication);
+// void _openHelpForm() async {
+//     const url = 'https://forms.gle/eDwfXp58cFaYrths5';
+
+//     if (Platform.isAndroid) {
+//       final uri = Uri.parse('googlechrome://navigate?url=$url');
+
+//       if (await canLaunchUrl(uri)) {
+//         await launchUrl(uri);
+//       } else {
+//         // Fallback ke browser default jika Chrome tidak ditemukan
+//         final fallbackUri = Uri.parse(url);
+//         if (await canLaunchUrl(fallbackUri)) {
+//           await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
+//         } else {
+//           ScaffoldMessenger.of(context).showSnackBar(
+//             const SnackBar(content: Text('Gagal membuka Google Form')),
+//           );
+//         }
+//       }
+//     } else {
+//       // iOS atau lainnya — pakai browser default
+//       final fallbackUri = Uri.parse(url);
+//       if (await canLaunchUrl(fallbackUri)) {
+//         await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
+//       } else {
+//         ScaffoldMessenger.of(context).showSnackBar(
+//           const SnackBar(content: Text('Gagal membuka Google Form')),
+//         );
+//       }
+//     }
+//   }
+
+void _openHelpForm() async {
+    const url = 'https://forms.gle/eDwfXp58cFaYrths5';
+    final uri = Uri.parse(url);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
     } else {
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text('Segera Hadir')));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Gagal membuka Google Form')),
+      );
     }
   }
 

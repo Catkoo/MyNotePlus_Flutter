@@ -56,6 +56,7 @@ class AddNoteScreen extends StatelessWidget {
                     title: title,
                     content: content,
                     ownerUid: uid,
+                    lastEdited: DateTime.now(),
                   );
                   viewModel.addNote(note);
                   Navigator.pop(context);

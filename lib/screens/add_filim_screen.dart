@@ -43,6 +43,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
       episodeWatched: episode,
       isFinished: selectedStatus == 'Selesai',
       ownerUid: currentUser?.uid ?? '',
+      lastEdited: DateTime.now(), 
     );
 
     FilmNoteViewModel().addFilmNote(note);

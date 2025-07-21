@@ -8,6 +8,7 @@ import '../models/note_model.dart';
 class NoteViewModel extends ChangeNotifier {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
   final List<Note> _notes = [];
+
   List<Note> get notes => List.unmodifiable(_notes);
 
   StreamSubscription? _subscription;
@@ -22,6 +23,10 @@ class NoteViewModel extends ChangeNotifier {
         .collection("users")
         .doc(uid)
         .collection("notes")
+        .orderBy(
+          "lastEdited",
+          descending: true,
+        ) // Urutkan berdasarkan lastEdited
         .snapshots()
         .listen((snapshot) {
           _notes.clear();
@@ -29,7 +34,7 @@ class NoteViewModel extends ChangeNotifier {
             final data = doc.data();
             _notes.add(Note.fromMap(data, doc.id));
           }
-          debugPrint('📝 Note listener: \${_notes.length} item');
+          debugPrint('📝 Note listener: ${_notes.length} item');
           notifyListeners();
         });
   }
@@ -39,7 +44,12 @@ class NoteViewModel extends ChangeNotifier {
     if (uid == null) return;
 
     final id = note.id.isEmpty ? const Uuid().v4() : note.id;
-    final newNote = note.copyWith(id: id, ownerUid: uid);
+    final newNote = note.copyWith(
+      id: id,
+      ownerUid: uid,
+      lastEdited:
+          DateTime.now(), // Tambahkan timestamp saat ditambahkan/diupdate
+    );
 
     _db
         .collection("users")
@@ -50,7 +60,7 @@ class NoteViewModel extends ChangeNotifier {
   }
 
   void updateNote(Note note) {
-    addNote(note);
+    addNote(note); // Sudah menangani lastEdited juga
   }
 
   void removeNote(Note note) {
@@ -89,4 +99,3 @@ class NoteViewModel extends ChangeNotifier {
     notifyListeners();
   }
 }
-

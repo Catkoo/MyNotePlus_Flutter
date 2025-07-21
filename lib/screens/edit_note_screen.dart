@@ -76,6 +76,7 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
                 final updatedNote = note!.copyWith(
                   title: titleController.text,
                   content: contentController.text,
+                  lastEdited: DateTime.now(),
                 );
                 viewModel.updateNote(updatedNote);
                 Navigator.pop(context, true);

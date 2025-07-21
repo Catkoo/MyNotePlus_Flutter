@@ -6,6 +6,7 @@ class FilmNote {
   final int episodeWatched;
   final bool isFinished;
   final String ownerUid;
+  final DateTime lastEdited; // ✅ Tambahan
 
   FilmNote({
     required this.id,
@@ -15,6 +16,7 @@ class FilmNote {
     this.episodeWatched = 0,
     this.isFinished = false,
     required this.ownerUid,
+    required this.lastEdited, // ✅ Tambahan
   });
 
   factory FilmNote.fromMap(Map<String, dynamic> data, String id) {
@@ -26,6 +28,8 @@ class FilmNote {
       episodeWatched: data['episodeWatched'] ?? 0,
       isFinished: data['finished'] ?? data['isFinished'] ?? false,
       ownerUid: data['ownerUid'] ?? '',
+      lastEdited:
+          DateTime.tryParse(data['lastEdited'] ?? '') ?? DateTime.now(), // ✅
     );
   }
 
@@ -37,6 +41,7 @@ class FilmNote {
       'episodeWatched': episodeWatched,
       'finished': isFinished,
       'ownerUid': ownerUid,
+      'lastEdited': lastEdited.toIso8601String(), // ✅
     };
   }
 
@@ -48,6 +53,7 @@ class FilmNote {
     int? episodeWatched,
     bool? isFinished,
     String? ownerUid,
+    DateTime? lastEdited, // ✅
   }) {
     return FilmNote(
       id: id ?? this.id,
@@ -57,6 +63,7 @@ class FilmNote {
       episodeWatched: episodeWatched ?? this.episodeWatched,
       isFinished: isFinished ?? this.isFinished,
       ownerUid: ownerUid ?? this.ownerUid,
+      lastEdited: lastEdited ?? this.lastEdited, // ✅
     );
   }
 }

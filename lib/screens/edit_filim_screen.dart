@@ -72,6 +72,7 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
       media: media.isEmpty ? null : media,
       episodeWatched: episode,
       isFinished: selectedStatus == 'Selesai',
+      lastEdited: DateTime.now(),
     );
 
     final viewModel = Provider.of<FilmNoteViewModel>(context, listen: false);
