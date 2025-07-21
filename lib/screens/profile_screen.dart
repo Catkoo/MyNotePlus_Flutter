@@ -69,39 +69,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-// void _openHelpForm() async {
-//     const url = 'https://forms.gle/eDwfXp58cFaYrths5';
+  // void _openHelpForm() async {
+  //     const url = 'https://forms.gle/eDwfXp58cFaYrths5';
 
-//     if (Platform.isAndroid) {
-//       final uri = Uri.parse('googlechrome://navigate?url=$url');
+  //     if (Platform.isAndroid) {
+  //       final uri = Uri.parse('googlechrome://navigate?url=$url');
 
-//       if (await canLaunchUrl(uri)) {
-//         await launchUrl(uri);
-//       } else {
-//         // Fallback ke browser default jika Chrome tidak ditemukan
-//         final fallbackUri = Uri.parse(url);
-//         if (await canLaunchUrl(fallbackUri)) {
-//           await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
-//         } else {
-//           ScaffoldMessenger.of(context).showSnackBar(
-//             const SnackBar(content: Text('Gagal membuka Google Form')),
-//           );
-//         }
-//       }
-//     } else {
-//       // iOS atau lainnya — pakai browser default
-//       final fallbackUri = Uri.parse(url);
-//       if (await canLaunchUrl(fallbackUri)) {
-//         await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
-//       } else {
-//         ScaffoldMessenger.of(context).showSnackBar(
-//           const SnackBar(content: Text('Gagal membuka Google Form')),
-//         );
-//       }
-//     }
-//   }
+  //       if (await canLaunchUrl(uri)) {
+  //         await launchUrl(uri);
+  //       } else {
+  //         // Fallback ke browser default jika Chrome tidak ditemukan
+  //         final fallbackUri = Uri.parse(url);
+  //         if (await canLaunchUrl(fallbackUri)) {
+  //           await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
+  //         } else {
+  //           ScaffoldMessenger.of(context).showSnackBar(
+  //             const SnackBar(content: Text('Gagal membuka Google Form')),
+  //           );
+  //         }
+  //       }
+  //     } else {
+  //       // iOS atau lainnya — pakai browser default
+  //       final fallbackUri = Uri.parse(url);
+  //       if (await canLaunchUrl(fallbackUri)) {
+  //         await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
+  //       } else {
+  //         ScaffoldMessenger.of(context).showSnackBar(
+  //           const SnackBar(content: Text('Gagal membuka Google Form')),
+  //         );
+  //       }
+  //     }
+  //   }
 
-void _openHelpForm() async {
+  void _openHelpForm() async {
     const url = 'https://forms.gle/eDwfXp58cFaYrths5';
     final uri = Uri.parse(url);
 
@@ -249,7 +249,7 @@ void _openHelpForm() async {
                   const SizedBox(height: 32),
                   Center(
                     child: Text(
-                      'Versi 1.0.0',
+                      'Versi 1.0.1',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.grey,
