@@ -118,13 +118,16 @@ class _DetailNoteScreenState extends State<DetailNoteScreen> {
                 FilledButton.icon(
                   icon: const Icon(Icons.delete),
                   label: const Text("Hapus"),
-                  onPressed: () {
-                    viewModel.removeNote(note!);
+                    onPressed: () {
+                    viewModel.deleteNote(
+                      note!.id,
+                    ); // ← Ganti dari removeNote(note!)
                     Navigator.pop(context);
                     ScaffoldMessenger.of(context).showSnackBar(
                       const SnackBar(content: Text("Catatan dihapus")),
                     );
                   },
+
                 ),
               ],
             ),

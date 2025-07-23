@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/film_note.dart';
 import '../viewmodel/film_note_viewmodel.dart';
@@ -16,9 +17,11 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
   final _yearController = TextEditingController();
   final _mediaController = TextEditingController();
   final _episodeController = TextEditingController();
+  final _totalEpisodeController = TextEditingController();
 
   final statusOptions = ['Belum selesai', 'Selesai'];
   String selectedStatus = 'Belum selesai';
+  DateTime? _nextEpisodeDateTime;
 
   bool isLoading = true;
   FilmNote? note;
@@ -42,7 +45,10 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
         _yearController.text = fetchedNote.year;
         _mediaController.text = fetchedNote.media ?? '';
         _episodeController.text = fetchedNote.episodeWatched.toString();
+        _totalEpisodeController.text =
+            fetchedNote.totalEpisodes?.toString() ?? '';
         selectedStatus = fetchedNote.isFinished ? 'Selesai' : 'Belum selesai';
+        _nextEpisodeDateTime = fetchedNote.nextEpisodeDate;
         isLoading = false;
       });
     } else {
@@ -53,11 +59,41 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
     }
   }
 
+  Future<void> _pickDateTime() async {
+    final now = DateTime.now();
+    final pickedDate = await showDatePicker(
+      context: context,
+      initialDate: _nextEpisodeDateTime ?? now,
+      firstDate: now,
+      lastDate: now.add(const Duration(days: 365)),
+    );
+
+    if (pickedDate == null) return;
+
+    final pickedTime = await showTimePicker(
+      context: context,
+      initialTime: const TimeOfDay(hour: 20, minute: 0),
+    );
+
+    if (pickedTime == null) return;
+
+    final combined = DateTime(
+      pickedDate.year,
+      pickedDate.month,
+      pickedDate.day,
+      pickedTime.hour,
+      pickedTime.minute,
+    );
+
+    setState(() => _nextEpisodeDateTime = combined);
+  }
+
   void _saveChanges() {
     final title = _titleController.text.trim();
     final year = _yearController.text.trim();
     final media = _mediaController.text.trim();
     final episode = int.tryParse(_episodeController.text.trim()) ?? 0;
+    final totalEpisodes = int.tryParse(_totalEpisodeController.text.trim());
 
     if (title.isEmpty || year.isEmpty || episode == 0 || note == null) {
       ScaffoldMessenger.of(
@@ -73,20 +109,25 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
       episodeWatched: episode,
       isFinished: selectedStatus == 'Selesai',
       lastEdited: DateTime.now(),
+      nextEpisodeDate: _nextEpisodeDateTime,
+      totalEpisodes: totalEpisodes,
     );
 
     final viewModel = Provider.of<FilmNoteViewModel>(context, listen: false);
     viewModel.updateFilmNote(updated);
-    Navigator.pop(context, true); // agar bisa trigger refresh saat kembali
+
     ScaffoldMessenger.of(
       context,
     ).showSnackBar(const SnackBar(content: Text('Catatan diperbarui')));
-    Navigator.pop(context);
+    Navigator.pop(context, true);
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final dateTimeFormatted = _nextEpisodeDateTime != null
+        ? DateFormat('dd MMM yyyy, HH:mm').format(_nextEpisodeDateTime!)
+        : null;
 
     return Scaffold(
       appBar: AppBar(title: const Text('Edit Film/Drama')),
@@ -143,6 +184,32 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
                       setState(() => selectedStatus = value!);
                     },
                     decoration: const InputDecoration(labelText: 'Status'),
+                  ),
+                  const SizedBox(height: 12),
+                  TextField(
+                    controller: _totalEpisodeController,
+                    decoration: const InputDecoration(
+                      labelText: 'Total Episode (opsional)',
+                    ),
+                    keyboardType: TextInputType.number,
+                  ),
+                  const SizedBox(height: 20),
+                  ListTile(
+                    contentPadding: EdgeInsets.zero,
+                    leading: const Icon(Icons.schedule),
+                    title: Text(
+                      dateTimeFormatted ??
+                          'Jadwal episode berikutnya (opsional)',
+                      style: TextStyle(
+                        color: dateTimeFormatted != null
+                            ? theme.colorScheme.onSurface
+                            : Colors.grey,
+                      ),
+                    ),
+                    trailing: TextButton(
+                      onPressed: _pickDateTime,
+                      child: const Text('Pilih'),
+                    ),
                   ),
                   const SizedBox(height: 32),
                   SizedBox(

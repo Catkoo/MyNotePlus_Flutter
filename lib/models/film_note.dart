@@ -1,3 +1,4 @@
+import 'package:cloud_firestore/cloud_firestore.dart';
 class FilmNote {
   final String id;
   final String title;
@@ -6,7 +7,10 @@ class FilmNote {
   final int episodeWatched;
   final bool isFinished;
   final String ownerUid;
-  final DateTime lastEdited; // ✅ Tambahan
+  final DateTime lastEdited;
+  final bool isPinned;
+  final DateTime? nextEpisodeDate; // ✅ baru
+  final int? totalEpisodes; // ✅ baru
 
   FilmNote({
     required this.id,
@@ -16,10 +20,13 @@ class FilmNote {
     this.episodeWatched = 0,
     this.isFinished = false,
     required this.ownerUid,
-    required this.lastEdited, // ✅ Tambahan
+    required this.lastEdited,
+    this.isPinned = false,
+    this.nextEpisodeDate, // ✅
+    this.totalEpisodes, // ✅
   });
 
-  factory FilmNote.fromMap(Map<String, dynamic> data, String id) {
+ factory FilmNote.fromMap(Map<String, dynamic> data, String id) {
     return FilmNote(
       id: id,
       title: data['title'] ?? '',
@@ -28,10 +35,17 @@ class FilmNote {
       episodeWatched: data['episodeWatched'] ?? 0,
       isFinished: data['finished'] ?? data['isFinished'] ?? false,
       ownerUid: data['ownerUid'] ?? '',
-      lastEdited:
-          DateTime.tryParse(data['lastEdited'] ?? '') ?? DateTime.now(), // ✅
+      lastEdited: (data['lastEdited'] is Timestamp)
+          ? (data['lastEdited'] as Timestamp).toDate()
+          : DateTime.tryParse(data['lastEdited'] ?? '') ?? DateTime.now(),
+      isPinned: data['isPinned'] ?? false,
+      nextEpisodeDate: (data['nextEpisodeDate'] is Timestamp)
+          ? (data['nextEpisodeDate'] as Timestamp).toDate()
+          : DateTime.tryParse(data['nextEpisodeDate'] ?? ''),
+      totalEpisodes: data['totalEpisodes'],
     );
   }
+
 
   Map<String, dynamic> toMap() {
     return {
@@ -41,7 +55,12 @@ class FilmNote {
       'episodeWatched': episodeWatched,
       'finished': isFinished,
       'ownerUid': ownerUid,
-      'lastEdited': lastEdited.toIso8601String(), // ✅
+      'lastEdited': lastEdited.toIso8601String(),
+      'isPinned': isPinned,
+      'nextEpisodeDate': nextEpisodeDate != null
+          ? nextEpisodeDate!.toIso8601String()
+          : null,
+      'totalEpisodes': totalEpisodes,
     };
   }
 
@@ -53,7 +72,10 @@ class FilmNote {
     int? episodeWatched,
     bool? isFinished,
     String? ownerUid,
-    DateTime? lastEdited, // ✅
+    DateTime? lastEdited,
+    bool? isPinned,
+    DateTime? nextEpisodeDate,
+    int? totalEpisodes,
   }) {
     return FilmNote(
       id: id ?? this.id,
@@ -63,7 +85,10 @@ class FilmNote {
       episodeWatched: episodeWatched ?? this.episodeWatched,
       isFinished: isFinished ?? this.isFinished,
       ownerUid: ownerUid ?? this.ownerUid,
-      lastEdited: lastEdited ?? this.lastEdited, // ✅
+      lastEdited: lastEdited ?? this.lastEdited,
+      isPinned: isPinned ?? this.isPinned,
+      nextEpisodeDate: nextEpisodeDate ?? this.nextEpisodeDate,
+      totalEpisodes: totalEpisodes ?? this.totalEpisodes,
     );
   }
 }

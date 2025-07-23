@@ -87,6 +87,8 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                       style: TextStyle(color: Colors.grey[600], fontSize: 12),
                     ),
                     const SizedBox(height: 12),
+
+                    // Tahun
                     Row(
                       children: [
                         const Icon(Icons.calendar_today, size: 16),
@@ -95,6 +97,8 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
+
+                    // Media
                     if (note.media != null && note.media!.isNotEmpty)
                       Row(
                         children: [
@@ -104,6 +108,8 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                         ],
                       ),
                     const SizedBox(height: 8),
+
+                    // Episode terakhir
                     Row(
                       children: [
                         const Icon(Icons.video_collection, size: 16),
@@ -112,6 +118,32 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                       ],
                     ),
                     const SizedBox(height: 8),
+
+                    // Total episode (opsional)
+                    if (note.totalEpisodes != null)
+                      Row(
+                        children: [
+                          const Icon(Icons.format_list_numbered, size: 16),
+                          const SizedBox(width: 6),
+                          Text("Total episode: ${note.totalEpisodes}"),
+                        ],
+                      ),
+                    const SizedBox(height: 8),
+
+                    // Next episode date (opsional)
+                    if (note.nextEpisodeDate != null)
+                      Row(
+                        children: [
+                          const Icon(Icons.notifications_active, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Tayang berikutnya: ${formatSimpleDate(note.nextEpisodeDate!)}",
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: 8),
+
+                    // Status
                     Row(
                       children: [
                         Icon(
@@ -178,7 +210,7 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                       foregroundColor: Colors.white,
                     ),
                     onPressed: () {
-                      viewModel.deleteFilmNote(note);
+                      viewModel.deleteNote(note.id);
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(content: Text("Catatan film dihapus")),
                       );

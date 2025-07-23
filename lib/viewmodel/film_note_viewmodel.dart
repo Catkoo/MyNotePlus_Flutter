@@ -28,7 +28,19 @@ class FilmNoteViewModel extends ChangeNotifier {
 
   void updateFilmNote(FilmNote note) => addFilmNote(note);
 
-  Future<void> deleteFilmNote(FilmNote note) async {
+  void deleteNote(String noteId) {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    _db
+        .collection("users")
+        .doc(uid)
+        .collection("film_notes")
+        .doc(noteId)
+        .delete();
+  }
+
+  Future<void> togglePin(String noteId, bool shouldPin) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
@@ -36,8 +48,8 @@ class FilmNoteViewModel extends ChangeNotifier {
         .collection('users')
         .doc(uid)
         .collection('film_notes')
-        .doc(note.id)
-        .delete();
+        .doc(noteId)
+        .update({'isPinned': shouldPin});
   }
 
   Future<FilmNote?> getFilmNoteById(String id) async {
@@ -57,7 +69,7 @@ class FilmNoteViewModel extends ChangeNotifier {
     return null;
   }
 
-void startFilmNoteListener() {
+  void startFilmNoteListener() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
@@ -65,7 +77,7 @@ void startFilmNoteListener() {
         .collection('users')
         .doc(uid)
         .collection('film_notes')
-        .orderBy('lastEdited', descending: true) // ✅ FIXED
+        .orderBy('lastEdited', descending: true)
         .snapshots()
         .listen((snapshot) {
           _filmNotes.clear();
@@ -78,6 +90,17 @@ void startFilmNoteListener() {
         });
 
     _isListening = true;
+  }
+
+  /// Untuk mencari film yang akan tayang dalam 24 jam ke depan
+  List<FilmNote> getUpcomingEpisodes() {
+    final now = DateTime.now();
+    return _filmNotes.where((note) {
+      if (note.isFinished) return false;
+      if (note.nextEpisodeDate == null) return false;
+      return note.nextEpisodeDate!.isAfter(now) &&
+          note.nextEpisodeDate!.isBefore(now.add(const Duration(days: 1)));
+    }).toList();
   }
 
   void clear() {

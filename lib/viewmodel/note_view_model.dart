@@ -63,11 +63,11 @@ class NoteViewModel extends ChangeNotifier {
     addNote(note); // Sudah menangani lastEdited juga
   }
 
-  void removeNote(Note note) {
+void deleteNote(String noteId) {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    _db.collection("users").doc(uid).collection("notes").doc(note.id).delete();
+    _db.collection("users").doc(uid).collection("notes").doc(noteId).delete();
   }
 
   Future<Note?> getNoteById(String id) async {
@@ -86,6 +86,31 @@ class NoteViewModel extends ChangeNotifier {
     }
     return null;
   }
+
+ Future<void> togglePin(String noteId, bool shouldPin) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    await _db
+        .collection('users')
+        .doc(uid)
+        .collection('notes')
+        .doc(noteId)
+        .update({'isPinned': shouldPin});
+  }
+
+Future<void> setNotePin(String noteId, String? pin) async {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    await _db
+        .collection("users")
+        .doc(uid)
+        .collection("notes")
+        .doc(noteId)
+        .update({'pin': pin, 'isLocked': pin != null && pin.isNotEmpty});
+  }
+
 
   @override
   void dispose() {

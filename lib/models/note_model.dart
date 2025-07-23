@@ -6,6 +6,9 @@ class Note {
   final String content;
   final String ownerUid;
   final DateTime lastEdited;
+  final bool isPinned;
+  final String? pin; // ✅
+  final bool isLocked; // ✅
 
   Note({
     required this.id,
@@ -13,6 +16,9 @@ class Note {
     required this.content,
     required this.ownerUid,
     required this.lastEdited,
+    this.isPinned = false,
+    this.pin,
+    this.isLocked = false, // ✅ default
   });
 
   factory Note.fromMap(Map<String, dynamic> map, String id) {
@@ -22,6 +28,9 @@ class Note {
       content: map['content'] ?? '',
       ownerUid: map['ownerUid'] ?? '',
       lastEdited: (map['lastEdited'] as Timestamp?)?.toDate() ?? DateTime.now(),
+      isPinned: map['isPinned'] ?? false,
+      pin: map['pin'], // ✅
+      isLocked: map['isLocked'] is bool ? map['isLocked'] : false,
     );
   }
 
@@ -31,6 +40,9 @@ class Note {
       'content': content,
       'ownerUid': ownerUid,
       'lastEdited': Timestamp.fromDate(lastEdited),
+      'isPinned': isPinned,
+      'pin': pin, // ✅
+      'isLocked': isLocked, // ✅
     };
   }
 
@@ -40,6 +52,9 @@ class Note {
     String? content,
     String? ownerUid,
     DateTime? lastEdited,
+    bool? isPinned,
+    String? pin,
+    bool? isLocked,
   }) {
     return Note(
       id: id ?? this.id,
@@ -47,12 +62,15 @@ class Note {
       content: content ?? this.content,
       ownerUid: ownerUid ?? this.ownerUid,
       lastEdited: lastEdited ?? this.lastEdited,
+      isPinned: isPinned ?? this.isPinned,
+      pin: pin ?? this.pin,
+      isLocked: isLocked ?? this.isLocked,
     );
   }
 
   @override
   String toString() {
-    return 'Note(id: $id, title: $title, content: $content, ownerUid: $ownerUid, lastEdited: $lastEdited)';
+    return 'Note(id: $id, title: $title, content: $content, ownerUid: $ownerUid, lastEdited: $lastEdited, isPinned: $isPinned)';
   }
 
   @override
@@ -63,7 +81,8 @@ class Note {
         other.title == title &&
         other.content == content &&
         other.ownerUid == ownerUid &&
-        other.lastEdited == lastEdited;
+        other.lastEdited == lastEdited &&
+        other.isPinned == isPinned;
   }
 
   @override
@@ -72,6 +91,7 @@ class Note {
         title.hashCode ^
         content.hashCode ^
         ownerUid.hashCode ^
-        lastEdited.hashCode;
+        lastEdited.hashCode ^
+        isPinned.hashCode;
   }
 }

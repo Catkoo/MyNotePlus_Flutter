@@ -5,8 +5,13 @@ import 'package:package_info_plus/package_info_plus.dart';
 import 'package:url_launcher/url_launcher.dart';
 import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+
 import '../viewmodel/note_view_model.dart';
 import '../viewmodel/film_note_viewmodel.dart';
+import '../models/note_model.dart'; 
+import '../models/film_note.dart'; 
 import 'profile_screen.dart';
 
 class HomeScreen extends StatefulWidget {
@@ -24,10 +29,18 @@ class _HomeScreenState extends State<HomeScreen> {
   String maintenanceMessage = "";
   String updateUrl = "";
   String updateChangelog = "";
+  bool hasNewNotification = false;
+  bool hasUnread = false;
+
+  final FirebaseMessaging _messaging = FirebaseMessaging.instance;
+  final FlutterLocalNotificationsPlugin _localNotifications =
+      FlutterLocalNotificationsPlugin();
 
   @override
   void initState() {
     super.initState();
+    _initFCM();
+     _listenForUnreadNotifications();
 
   WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = FirebaseAuth.instance.currentUser;
@@ -80,6 +93,73 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
+void _listenForUnreadNotifications() {
+    final uid = FirebaseAuth.instance.currentUser?.uid;
+    if (uid == null) return;
+
+    FirebaseFirestore.instance
+        .collection('users')
+        .doc(uid)
+        .collection('notifications')
+        .where('isRead', isEqualTo: false)
+        .snapshots()
+        .listen((snapshot) {
+          final hasData = snapshot.docs.isNotEmpty;
+          print('🔍 hasUnread: $hasData'); // Tambah ini buat debug
+          setState(() {
+            hasUnread = hasData;
+          });
+        });
+  }
+
+  
+  void _initFCM() async {
+    // ✅ Minta izin notifikasi (Android 13+)
+    NotificationSettings settings = await _messaging.requestPermission();
+
+    if (settings.authorizationStatus == AuthorizationStatus.authorized) {
+      debugPrint('✅ Notifikasi diizinkan');
+
+      // ✅ Dapatkan token device (jika perlu)
+      final token = await _messaging.getToken();
+      debugPrint('📱 Token FCM: $token');
+
+      // ✅ Listener saat pesan diterima saat foreground
+      FirebaseMessaging.onMessage.listen((RemoteMessage message) {
+        final notification = message.notification;
+        if (notification != null) {
+          _showLocalNotification(notification.title, notification.body);
+          setState(() => hasNewNotification = true);
+        }
+      });
+    } else {
+      debugPrint('❌ Notifikasi tidak diizinkan');
+    }
+  }
+
+void _showLocalNotification(String? title, String? body) {
+    const AndroidNotificationDetails androidDetails =
+        AndroidNotificationDetails(
+          'default_channel',
+          'Default',
+          importance: Importance.max,
+          priority: Priority.high,
+          showWhen: false,
+        );
+
+    const NotificationDetails platformDetails = NotificationDetails(
+      android: androidDetails,
+    );
+
+    _localNotifications.show(
+      0,
+      title ?? 'Notifikasi',
+      body ?? '',
+      platformDetails,
+    );
+  }
+
+
   @override
   Widget build(BuildContext context) {
     if (isMaintenance) {
@@ -89,8 +169,35 @@ class _HomeScreenState extends State<HomeScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-        appBar: AppBar(
+       appBar: AppBar(
           title: const Text("MyNotePlus"),
+          actions: [
+            IconButton(
+              onPressed: () async {
+                await Navigator.pushNamed(context, '/notification');
+                // Setelah kembali dari NotificationScreen, Firestore listener akan auto-refresh
+              },
+              icon: Stack(
+                children: [
+                  const Icon(Icons.notifications),
+                  if (hasUnread)
+                    const Positioned(
+                      right: 0,
+                      top: 0,
+                      child: CircleAvatar(
+                        radius: 6,
+                        backgroundColor: Colors.red,
+                        child: Text(
+                          '1',
+                          style: TextStyle(fontSize: 10, color: Colors.white),
+                        ),
+                      ),
+                    ),
+                ],
+              ),
+
+            ),
+          ],
           bottom: selectedBottomTab == 0
               ? const TabBar(
                   tabs: [
@@ -163,6 +270,154 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
 
+  void _showPinDialog(
+    BuildContext context,
+    String correctPin,
+    VoidCallback onSuccess,
+  ) {
+    final controller = TextEditingController();
+
+    showDialog(
+      context: context,
+      builder: (_) {
+        return AlertDialog(
+          title: const Text("Masukkan PIN"),
+          content: TextField(
+            controller: controller,
+            obscureText: true,
+            maxLength: 4,
+            keyboardType: TextInputType.number,
+            decoration: const InputDecoration(hintText: "4-digit PIN"),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.pop(context),
+              child: const Text("Batal"),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                if (controller.text == correctPin) {
+                  Navigator.pop(context);
+                  onSuccess();
+                } else {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(const SnackBar(content: Text("PIN salah")));
+                }
+              },
+              child: const Text("OK"),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showNoteOptions(BuildContext context, Note note) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(
+                  note.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                ),
+                title: Text(note.isPinned ? 'Lepas Pin' : 'Pin Catatan'),
+                onTap: () {
+                  Provider.of<NoteViewModel>(
+                    context,
+                    listen: false,
+                  ).togglePin(note.id, !note.isPinned);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: Icon(note.isLocked ? Icons.lock_open : Icons.lock),
+                title: Text(note.isLocked ? 'Buka Kunci' : 'Kunci dengan PIN'),
+                onTap: () async {
+                  Navigator.pop(context);
+
+                  final pinController = TextEditingController();
+                  final result = await showDialog<String>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: Text(
+                        note.isLocked ? "Buka Kunci" : "Atur PIN (4 angka)",
+                      ),
+                      content: TextField(
+                        controller: pinController,
+                        obscureText: true,
+                        maxLength: 4,
+                        keyboardType: TextInputType.number,
+                        decoration: const InputDecoration(
+                          hintText: "Masukkan PIN",
+                        ),
+                      ),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context),
+                          child: const Text("Batal"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () {
+                            final pin = pinController.text.trim();
+                            if (!note.isLocked && pin.length != 4) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                const SnackBar(
+                                  content: Text("PIN harus 4 angka"),
+                                ),
+                              );
+                              return;
+                            }
+                            Navigator.pop(
+                              context,
+                              note.isLocked ? "" : pin,
+                            ); // "" = buka kunci
+                          },
+                          child: Text(note.isLocked ? "Buka" : "Kunci"),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (result != null) {
+                    await Provider.of<NoteViewModel>(
+                      context,
+                      listen: false,
+                    ).setNotePin(note.id, result.isEmpty ? null : result);
+                  }
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete),
+                title: const Text('Hapus Catatan'),
+                onTap: () {
+                  Provider.of<NoteViewModel>(
+                    context,
+                    listen: false,
+                  ).deleteNote(note.id);
+                  Navigator.pop(context);
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: const Text('Batal'),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<NoteViewModel>(
@@ -176,9 +431,12 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
                   ),
                 )
                 .toList()
-              ..sort(
-                (a, b) => b.lastEdited.compareTo(a.lastEdited),
-              ); // Terbaru di atas
+              ..sort((a, b) {
+                if (a.isPinned != b.isPinned) {
+                  return b.isPinned ? 1 : -1;
+                }
+                return b.lastEdited.compareTo(a.lastEdited);
+              });
 
         return Column(
           children: [
@@ -211,19 +469,36 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
                           margin: const EdgeInsets.symmetric(vertical: 8),
                           elevation: 2,
                           child: ListTile(
+                            leading: note.isPinned
+                                ? const Icon(
+                                    Icons.push_pin,
+                                    color: Colors.amber,
+                                  )
+                                : null,
                             title: Text(note.title),
                             subtitle: Text(
-                              note.content,
+                              note.isLocked ? '****' : note.content,
                               maxLines: 2,
                               overflow: TextOverflow.ellipsis,
                             ),
                             onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/detail_note',
-                                arguments: note.id,
-                              );
+                              if (note.isLocked) {
+                                _showPinDialog(context, note.pin!, () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/detail_note',
+                                    arguments: note.id,
+                                  );
+                                });
+                              } else {
+                                Navigator.pushNamed(
+                                  context,
+                                  '/detail_note',
+                                  arguments: note.id,
+                                );
+                              }
                             },
+                            onLongPress: () => _showNoteOptions(context, note),
                           ),
                         );
                       },
@@ -247,6 +522,54 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
 
+  void _showFilmNoteOptions(BuildContext context, FilmNote note) {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+      ),
+      builder: (_) {
+        return SafeArea(
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              ListTile(
+                leading: Icon(
+                  note.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                ),
+                title: Text(note.isPinned ? 'Lepas Pin' : 'Pin Catatan'),
+                onTap: () {
+                  Provider.of<FilmNoteViewModel>(
+                    context,
+                    listen: false,
+                  ).togglePin(note.id, !note.isPinned);
+                  Navigator.pop(context);
+                },
+              ),
+              ListTile(
+                leading: const Icon(Icons.delete),
+                title: const Text('Hapus Catatan'),
+                onTap: () {
+                  Provider.of<FilmNoteViewModel>(
+                    context,
+                    listen: false,
+                  ).deleteNote(note.id);
+                  Navigator.pop(context);
+                },
+              ),
+              const Divider(),
+              ListTile(
+                leading: const Icon(Icons.close),
+                title: const Text('Batal'),
+                onTap: () => Navigator.pop(context),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     return Consumer<FilmNoteViewModel>(
@@ -260,9 +583,13 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                   ),
                 )
                 .toList()
-              ..sort(
-                (a, b) => b.lastEdited.compareTo(a.lastEdited),
-              ); // Urutan terbaru
+              ..sort((a, b) {
+                // Pinned di atas, lalu terbaru
+                if (a.isPinned != b.isPinned) {
+                  return b.isPinned ? 1 : -1;
+                }
+                return b.lastEdited.compareTo(a.lastEdited);
+              });
 
         return Column(
           children: [
@@ -296,6 +623,12 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                           elevation: 2,
                           color: note.isFinished ? Colors.green[50] : null,
                           child: ListTile(
+                            leading: note.isPinned
+                                ? const Icon(
+                                    Icons.push_pin,
+                                    color: Colors.amber,
+                                  )
+                                : null,
                             title: Text(note.title),
                             subtitle: Text(
                               "Tahun: ${note.year}  •  Episode: ${note.episodeWatched}",
@@ -313,6 +646,8 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                                 arguments: note.id,
                               );
                             },
+                            onLongPress: () =>
+                                _showFilmNoteOptions(context, note),
                           ),
                         );
                       },
@@ -324,6 +659,7 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
     );
   }
 }
+
 
 class MaintenanceScreen extends StatelessWidget {
   final String message;
