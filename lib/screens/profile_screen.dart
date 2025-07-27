@@ -8,6 +8,8 @@ import '../screens/change_email_dialog.dart';
 import '../screens/change_password_dialog.dart';
 import '../viewmodel/note_view_model.dart';
 import '../viewmodel/film_note_viewmodel.dart';
+import '../widgets/theme_provider.dart'; 
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -68,39 +70,6 @@ class _ProfileScreenState extends State<ProfileScreen> {
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     }
   }
-
-  // void _openHelpForm() async {
-  //     const url = 'https://forms.gle/eDwfXp58cFaYrths5';
-
-  //     if (Platform.isAndroid) {
-  //       final uri = Uri.parse('googlechrome://navigate?url=$url');
-
-  //       if (await canLaunchUrl(uri)) {
-  //         await launchUrl(uri);
-  //       } else {
-  //         // Fallback ke browser default jika Chrome tidak ditemukan
-  //         final fallbackUri = Uri.parse(url);
-  //         if (await canLaunchUrl(fallbackUri)) {
-  //           await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
-  //         } else {
-  //           ScaffoldMessenger.of(context).showSnackBar(
-  //             const SnackBar(content: Text('Gagal membuka Google Form')),
-  //           );
-  //         }
-  //       }
-  //     } else {
-  //       // iOS atau lainnya — pakai browser default
-  //       final fallbackUri = Uri.parse(url);
-  //       if (await canLaunchUrl(fallbackUri)) {
-  //         await launchUrl(fallbackUri, mode: LaunchMode.externalApplication);
-  //       } else {
-  //         ScaffoldMessenger.of(context).showSnackBar(
-  //           const SnackBar(content: Text('Gagal membuka Google Form')),
-  //         );
-  //       }
-  //     }
-  //   }
-
   void _openHelpForm() async {
     const url = 'https://forms.gle/eDwfXp58cFaYrths5';
     final uri = Uri.parse(url);
@@ -236,6 +205,21 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     onPressed: _openHelpForm,
                     label: const Text("Bantuan / Hubungi Kami"),
                   ),
+                  SwitchListTile(
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                    title: const Text('Mode Gelap'),
+                    secondary: const Icon(Icons.dark_mode),
+                    value: context.watch<ThemeProvider>().isDarkMode,
+                    onChanged: (bool value) {
+                      context.read<ThemeProvider>().toggleTheme(value);
+                    },
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
+                    tileColor: Theme.of(
+                      context,
+                    ).colorScheme.surfaceVariant.withOpacity(0.5),
+                  ),
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.logout),
@@ -249,7 +233,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 32),
                   Center(
                     child: Text(
-                      'Versi 1.0.1',
+                      'Versi 1.0.2',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.grey,

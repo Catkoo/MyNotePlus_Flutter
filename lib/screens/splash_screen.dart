@@ -2,6 +2,8 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import '../utils/device_helper.dart';
+import '../utils/version_helper.dart';
 
 class SplashScreen extends StatefulWidget {
   const SplashScreen({super.key});
@@ -14,7 +16,35 @@ class _SplashScreenState extends State<SplashScreen> {
   @override
   void initState() {
     super.initState();
-    _checkAppStatus();
+    _handleStartupLogic();
+  }
+
+  Future<void> _handleStartupLogic() async {
+    final version = await getAppVersion();
+    final isXiaomi = await isXiaomiOrPoco();
+    final alreadyShown = await hasShownXiaomiWarning(version);
+
+    if (isXiaomi && !alreadyShown && mounted) {
+      await showDialog(
+        context: context,
+        builder: (_) => AlertDialog(
+          title: const Text("Perhatian"),
+          content: const Text(
+            "Perangkat Xiaomi/Poco terdeteksi.\n\nAgar notifikasi berjalan lancar, aktifkan izin notifikasi dan atur aplikasi ke mode \"Tidak dibatasi\" di Penghemat Baterai.",
+          ),
+          actions: [
+            TextButton(
+              child: const Text("Oke"),
+              onPressed: () => Navigator.of(context).pop(),
+            ),
+          ],
+        ),
+      );
+
+      await markXiaomiWarningShown(version);
+    }
+
+    await _checkAppStatus();
   }
 
   Future<void> _checkAppStatus() async {

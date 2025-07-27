@@ -1,5 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/notification_helper.dart';
 import 'package:flutter/material.dart';
 import 'package:uuid/uuid.dart';
 import '../models/film_note.dart';
@@ -26,19 +27,26 @@ class FilmNoteViewModel extends ChangeNotifier {
         .set(newNote.toMap());
   }
 
-  void updateFilmNote(FilmNote note) => addFilmNote(note);
+  Future<void> updateFilmNote(FilmNote note) async {
+    await addFilmNote(note);
+  }
 
-  void deleteNote(String noteId) {
+
+Future<void> deleteNote(String noteId) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
-    _db
+    // Batalkan notifikasi sebelum menghapus
+    await cancelNotificationById(noteId.hashCode);
+
+    await _db
         .collection("users")
         .doc(uid)
         .collection("film_notes")
         .doc(noteId)
         .delete();
   }
+
 
   Future<void> togglePin(String noteId, bool shouldPin) async {
     final uid = FirebaseAuth.instance.currentUser?.uid;

@@ -1,4 +1,5 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+
 class FilmNote {
   final String id;
   final String title;
@@ -9,8 +10,12 @@ class FilmNote {
   final String ownerUid;
   final DateTime lastEdited;
   final bool isPinned;
-  final DateTime? nextEpisodeDate; // ✅ baru
-  final int? totalEpisodes; // ✅ baru
+  final DateTime? nextEpisodeDate;
+  final int? totalEpisodes;
+
+  // ✅ Tambahan baru
+  final double? overallRating;
+  final bool? mustRewatch;
 
   FilmNote({
     required this.id,
@@ -22,11 +27,14 @@ class FilmNote {
     required this.ownerUid,
     required this.lastEdited,
     this.isPinned = false,
-    this.nextEpisodeDate, // ✅
-    this.totalEpisodes, // ✅
+    this.nextEpisodeDate,
+    this.totalEpisodes,
+    this.overallRating,
+    this.mustRewatch,
   });
 
- factory FilmNote.fromMap(Map<String, dynamic> data, String id) {
+  /// Konversi dari Firestore ke objek
+  factory FilmNote.fromMap(Map<String, dynamic> data, String id) {
     return FilmNote(
       id: id,
       title: data['title'] ?? '',
@@ -43,10 +51,12 @@ class FilmNote {
           ? (data['nextEpisodeDate'] as Timestamp).toDate()
           : DateTime.tryParse(data['nextEpisodeDate'] ?? ''),
       totalEpisodes: data['totalEpisodes'],
+      overallRating: (data['overallRating'] as num?)?.toDouble(),
+      mustRewatch: data['mustRewatch'],
     );
   }
 
-
+  /// Konversi ke Firestore
   Map<String, dynamic> toMap() {
     return {
       'title': title,
@@ -57,13 +67,14 @@ class FilmNote {
       'ownerUid': ownerUid,
       'lastEdited': lastEdited.toIso8601String(),
       'isPinned': isPinned,
-      'nextEpisodeDate': nextEpisodeDate != null
-          ? nextEpisodeDate!.toIso8601String()
-          : null,
+      'nextEpisodeDate': nextEpisodeDate?.toIso8601String(),
       'totalEpisodes': totalEpisodes,
+      'overallRating': overallRating,
+      'mustRewatch': mustRewatch,
     };
   }
 
+  /// Untuk duplikasi saat update
   FilmNote copyWith({
     String? id,
     String? title,
@@ -76,6 +87,8 @@ class FilmNote {
     bool? isPinned,
     DateTime? nextEpisodeDate,
     int? totalEpisodes,
+    double? overallRating,
+    bool? mustRewatch,
   }) {
     return FilmNote(
       id: id ?? this.id,
@@ -89,6 +102,8 @@ class FilmNote {
       isPinned: isPinned ?? this.isPinned,
       nextEpisodeDate: nextEpisodeDate ?? this.nextEpisodeDate,
       totalEpisodes: totalEpisodes ?? this.totalEpisodes,
+      overallRating: overallRating ?? this.overallRating,
+      mustRewatch: mustRewatch ?? this.mustRewatch,
     );
   }
 }

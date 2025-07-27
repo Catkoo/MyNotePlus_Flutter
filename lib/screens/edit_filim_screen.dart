@@ -3,6 +3,7 @@ import 'package:intl/intl.dart';
 import 'package:provider/provider.dart';
 import '../models/film_note.dart';
 import '../viewmodel/film_note_viewmodel.dart';
+import '../services/notification_helper.dart';
 
 class EditFilmNoteScreen extends StatefulWidget {
   final String filmId;
@@ -22,6 +23,9 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
   final statusOptions = ['Belum selesai', 'Selesai'];
   String selectedStatus = 'Belum selesai';
   DateTime? _nextEpisodeDateTime;
+
+  double _rating = 0.0;
+  bool _mustRewatch = false;
 
   bool isLoading = true;
   FilmNote? note;
@@ -49,6 +53,8 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
             fetchedNote.totalEpisodes?.toString() ?? '';
         selectedStatus = fetchedNote.isFinished ? 'Selesai' : 'Belum selesai';
         _nextEpisodeDateTime = fetchedNote.nextEpisodeDate;
+        _rating = fetchedNote.overallRating ?? 0.0;
+        _mustRewatch = fetchedNote.mustRewatch ?? false;
         isLoading = false;
       });
     } else {
@@ -88,7 +94,7 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
     setState(() => _nextEpisodeDateTime = combined);
   }
 
-  void _saveChanges() {
+  void _saveChanges() async {
     final title = _titleController.text.trim();
     final year = _yearController.text.trim();
     final media = _mediaController.text.trim();
@@ -111,10 +117,25 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
       lastEdited: DateTime.now(),
       nextEpisodeDate: _nextEpisodeDateTime,
       totalEpisodes: totalEpisodes,
+      overallRating: selectedStatus == 'Selesai' ? _rating : null,
+      mustRewatch: selectedStatus == 'Selesai' ? _mustRewatch : null,
     );
 
     final viewModel = Provider.of<FilmNoteViewModel>(context, listen: false);
-    viewModel.updateFilmNote(updated);
+    await viewModel.updateFilmNote(updated);
+
+    final notifId = updated.id.hashCode;
+
+    await cancelNotification(notifId);
+
+    if (_nextEpisodeDateTime != null) {
+      await scheduleNotification(
+        id: notifId,
+        title: 'Episode Baru: ${updated.title}',
+        body: 'Jangan lupa nonton episode berikutnya hari ini!',
+        scheduledDate: _nextEpisodeDateTime!,
+      );
+    }
 
     ScaffoldMessenger.of(
       context,
@@ -146,32 +167,18 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
                     ),
                   ),
                   const SizedBox(height: 24),
-                  TextField(
-                    controller: _titleController,
-                    decoration: const InputDecoration(labelText: 'Judul'),
+                  _buildInputField('Judul', _titleController),
+                  _buildInputField(
+                    'Tahun',
+                    _yearController,
+                    TextInputType.number,
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _yearController,
-                    decoration: const InputDecoration(labelText: 'Tahun'),
-                    keyboardType: TextInputType.number,
+                  _buildInputField('Media (opsional)', _mediaController),
+                  _buildInputField(
+                    'Episode terakhir ditonton',
+                    _episodeController,
+                    TextInputType.number,
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _mediaController,
-                    decoration: const InputDecoration(
-                      labelText: 'Media (opsional)',
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _episodeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Episode terakhir ditonton',
-                    ),
-                    keyboardType: TextInputType.number,
-                  ),
-                  const SizedBox(height: 12),
                   DropdownButtonFormField<String>(
                     value: selectedStatus,
                     items: statusOptions.map((status) {
@@ -185,13 +192,10 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
                     },
                     decoration: const InputDecoration(labelText: 'Status'),
                   ),
-                  const SizedBox(height: 12),
-                  TextField(
-                    controller: _totalEpisodeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Total Episode (opsional)',
-                    ),
-                    keyboardType: TextInputType.number,
+                  _buildInputField(
+                    'Total Episode (opsional)',
+                    _totalEpisodeController,
+                    TextInputType.number,
                   ),
                   const SizedBox(height: 20),
                   ListTile(
@@ -211,6 +215,25 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
                       child: const Text('Pilih'),
                     ),
                   ),
+                  if (selectedStatus == 'Selesai') ...[
+                    const SizedBox(height: 24),
+                    Text('Rating Kamu', style: theme.textTheme.titleMedium),
+                    Slider(
+                      value: _rating,
+                      onChanged: (value) => setState(() => _rating = value),
+                      min: 0.0,
+                      max: 5.0,
+                      divisions: 10,
+                      label: _rating.toStringAsFixed(1),
+                    ),
+                    const SizedBox(height: 12),
+                    SwitchListTile(
+                      title: const Text('Wajib Ditonton Ulang?'),
+                      value: _mustRewatch,
+                      onChanged: (value) =>
+                          setState(() => _mustRewatch = value),
+                    ),
+                  ],
                   const SizedBox(height: 32),
                   SizedBox(
                     width: double.infinity,
@@ -223,6 +246,21 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
                 ],
               ),
             ),
+    );
+  }
+
+  Widget _buildInputField(
+    String label,
+    TextEditingController controller, [
+    TextInputType? inputType,
+  ]) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 16),
+      child: TextField(
+        controller: controller,
+        keyboardType: inputType,
+        decoration: InputDecoration(labelText: label),
+      ),
     );
   }
 }

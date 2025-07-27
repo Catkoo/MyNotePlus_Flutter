@@ -175,13 +175,12 @@ void _showLocalNotification(String? title, String? body) {
             IconButton(
               onPressed: () async {
                 await Navigator.pushNamed(context, '/notification');
-                // Setelah kembali dari NotificationScreen, Firestore listener akan auto-refresh
               },
               icon: Stack(
                 children: [
                   const Icon(Icons.notifications),
                   if (hasUnread)
-                    const Positioned(
+                    Positioned(
                       right: 0,
                       top: 0,
                       child: CircleAvatar(

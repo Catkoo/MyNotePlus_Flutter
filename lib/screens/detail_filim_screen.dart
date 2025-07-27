@@ -88,7 +88,6 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                     ),
                     const SizedBox(height: 12),
 
-                    // Tahun
                     Row(
                       children: [
                         const Icon(Icons.calendar_today, size: 16),
@@ -98,7 +97,6 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // Media
                     if (note.media != null && note.media!.isNotEmpty)
                       Row(
                         children: [
@@ -109,7 +107,6 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                       ),
                     const SizedBox(height: 8),
 
-                    // Episode terakhir
                     Row(
                       children: [
                         const Icon(Icons.video_collection, size: 16),
@@ -119,7 +116,6 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                     ),
                     const SizedBox(height: 8),
 
-                    // Total episode (opsional)
                     if (note.totalEpisodes != null)
                       Row(
                         children: [
@@ -130,7 +126,6 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                       ),
                     const SizedBox(height: 8),
 
-                    // Next episode date (opsional)
                     if (note.nextEpisodeDate != null)
                       Row(
                         children: [
@@ -143,7 +138,6 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                       ),
                     const SizedBox(height: 8),
 
-                    // Status
                     Row(
                       children: [
                         Icon(
@@ -161,6 +155,36 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                         ),
                       ],
                     ),
+                    const SizedBox(height: 8),
+
+                    if (note.isFinished && note.overallRating != null)
+                      Row(
+                        children: [
+                          const Icon(
+                            Icons.star_rate,
+                            size: 16,
+                            color: Colors.amber,
+                          ),
+                          const SizedBox(width: 6),
+                          Text(
+                            "Rating: ${note.overallRating!.toStringAsFixed(1)} / 5",
+                          ),
+                        ],
+                      ),
+                    const SizedBox(height: 8),
+
+                    if (note.isFinished && note.mustRewatch != null)
+                      Row(
+                        children: [
+                          const Icon(Icons.loop, size: 16),
+                          const SizedBox(width: 6),
+                          Text(
+                            note.mustRewatch!
+                                ? "Wajib ditonton ulang"
+                                : "Tidak wajib rewatch",
+                          ),
+                        ],
+                      ),
                   ],
                 ),
               ),

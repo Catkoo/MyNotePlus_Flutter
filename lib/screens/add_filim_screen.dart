@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import '../services/notification_helper.dart';
 import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
 import '../models/film_note.dart';
@@ -23,6 +24,8 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
   final statusOptions = ['Belum selesai', 'Selesai'];
   String selectedStatus = 'Belum selesai';
 
+  double _rating = 0.0;
+  bool _mustRewatch = false;
   bool isSaving = false;
 
   Future<void> _pickDateTime() async {
@@ -56,7 +59,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
     });
   }
 
-  void _saveFilmNote() {
+  void _saveFilmNote() async {
     final title = _titleController.text.trim();
     final year = _yearController.text.trim();
     final media = _mediaController.text.trim();
@@ -82,9 +85,21 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
       lastEdited: DateTime.now(),
       nextEpisodeDate: _nextEpisodeDateTime,
       totalEpisodes: totalEpisode,
+      overallRating: selectedStatus == 'Selesai' ? _rating : null,
+      mustRewatch: selectedStatus == 'Selesai' ? _mustRewatch : null,
     );
 
-    FilmNoteViewModel().addFilmNote(note);
+    await FilmNoteViewModel().addFilmNote(note);
+
+    if (_nextEpisodeDateTime != null) {
+      await scheduleNotification(
+        id: note.id.hashCode,
+        title: 'Episode Baru: ${note.title}',
+        body: 'Jangan lupa nonton episode berikutnya hari ini!',
+        scheduledDate: _nextEpisodeDateTime!,
+      );
+    }
+
     Navigator.pop(context);
   }
 
@@ -98,84 +113,119 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
     return Scaffold(
       appBar: AppBar(title: const Text('Tambah Film/Drama')),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.all(24),
+        padding: const EdgeInsets.all(16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Text(
-              'Catatan Film/Drama',
-              style: theme.textTheme.headlineSmall?.copyWith(
-                fontWeight: FontWeight.bold,
-                color: theme.colorScheme.primary,
+            Card(
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(16),
               ),
-            ),
-            const SizedBox(height: 24),
-            TextField(
-              controller: _titleController,
-              decoration: const InputDecoration(labelText: 'Judul Film/Drama'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _yearController,
-              decoration: const InputDecoration(labelText: 'Tahun'),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _mediaController,
-              decoration: const InputDecoration(labelText: 'Media (opsional)'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _episodeController,
-              decoration: const InputDecoration(
-                labelText: 'Episode terakhir ditonton',
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 12),
-            DropdownButtonFormField<String>(
-              value: selectedStatus,
-              items: statusOptions.map((status) {
-                return DropdownMenuItem(value: status, child: Text(status));
-              }).toList(),
-              onChanged: (value) {
-                setState(() => selectedStatus = value!);
-              },
-              decoration: const InputDecoration(labelText: 'Status'),
-            ),
-            const SizedBox(height: 12),
-            TextField(
-              controller: _totalEpisodeController,
-              decoration: const InputDecoration(
-                labelText: 'Total Episode (opsional)',
-              ),
-              keyboardType: TextInputType.number,
-            ),
-            const SizedBox(height: 20),
-            ListTile(
-              contentPadding: EdgeInsets.zero,
-              leading: const Icon(Icons.schedule),
-              title: Text(
-                dateTimeFormatted ?? 'Jadwal episode berikutnya (opsional)',
-                style: TextStyle(
-                  color: dateTimeFormatted != null
-                      ? theme.colorScheme.onSurface
-                      : Colors.grey,
+              elevation: 4,
+              child: Padding(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    TextField(
+                      controller: _titleController,
+                      decoration: const InputDecoration(
+                        labelText: 'Judul Film/Drama',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _yearController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(labelText: 'Tahun'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _mediaController,
+                      decoration: const InputDecoration(
+                        labelText: 'Media (opsional)',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _episodeController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Episode terakhir ditonton',
+                      ),
+                    ),
+                    const SizedBox(height: 12),
+                    DropdownButtonFormField<String>(
+                      value: selectedStatus,
+                      items: statusOptions.map((status) {
+                        return DropdownMenuItem(
+                          value: status,
+                          child: Text(status),
+                        );
+                      }).toList(),
+                      onChanged: (value) {
+                        setState(() => selectedStatus = value!);
+                      },
+                      decoration: const InputDecoration(labelText: 'Status'),
+                    ),
+                    const SizedBox(height: 12),
+                    TextField(
+                      controller: _totalEpisodeController,
+                      keyboardType: TextInputType.number,
+                      decoration: const InputDecoration(
+                        labelText: 'Total Episode (opsional)',
+                      ),
+                    ),
+                    const SizedBox(height: 20),
+                    ListTile(
+                      contentPadding: EdgeInsets.zero,
+                      leading: const Icon(Icons.schedule),
+                      title: Text(
+                        dateTimeFormatted ??
+                            'Jadwal episode berikutnya (opsional)',
+                        style: TextStyle(
+                          color: dateTimeFormatted != null
+                              ? theme.colorScheme.onSurface
+                              : Colors.grey,
+                        ),
+                      ),
+                      trailing: TextButton(
+                        onPressed: _pickDateTime,
+                        child: const Text('Pilih'),
+                      ),
+                    ),
+                    if (selectedStatus == 'Selesai') ...[
+                      const SizedBox(height: 24),
+                      Text('Rating Kamu', style: theme.textTheme.titleMedium),
+                      Slider(
+                        value: _rating,
+                        onChanged: (value) {
+                          setState(() => _rating = value);
+                        },
+                        min: 0.0,
+                        max: 5.0,
+                        divisions: 10,
+                        label: _rating.toStringAsFixed(1),
+                      ),
+                      const SizedBox(height: 12),
+                      SwitchListTile(
+                        title: const Text('Wajib Ditonton Ulang?'),
+                        value: _mustRewatch,
+                        onChanged: (value) {
+                          setState(() => _mustRewatch = value);
+                        },
+                      ),
+                    ],
+                    const SizedBox(height: 24),
+                    SizedBox(
+                      width: double.infinity,
+                      child: FilledButton.icon(
+                        onPressed: isSaving ? null : _saveFilmNote,
+                        icon: const Icon(Icons.check),
+                        label: const Text('Simpan Catatan'),
+                      ),
+                    ),
+                  ],
                 ),
-              ),
-              trailing: TextButton(
-                onPressed: _pickDateTime,
-                child: const Text('Pilih'),
-              ),
-            ),
-            const SizedBox(height: 32),
-            SizedBox(
-              width: double.infinity,
-              child: FilledButton.icon(
-                onPressed: _saveFilmNote,
-                icon: const Icon(Icons.check),
-                label: const Text('Simpan'),
               ),
             ),
           ],
