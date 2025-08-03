@@ -22,7 +22,7 @@ Jika Anda menemukan bug atau potensi celah keamanan dalam aplikasi:
 1. **Jangan laporkan secara publik.**
 2. Laporkan kerentanan melalui formulir berikut:
 
-📋 **[Formulir Pelaporan Keamanan]([https://forms.gle/your-form-link](https://forms.gle/cxjSpfxGk8pSRbQq6))**  
+📋 **[Formulir Pelaporan Keamanan](https://forms.gle/cxjSpfxGk8pSRbQq6)**
 
 Mohon sertakan:
 - Deskripsi masalah
