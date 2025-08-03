@@ -7,12 +7,16 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-
+import '../widgets/home_backup_sync_buttons.dart';
 import '../viewmodel/note_view_model.dart';
 import '../viewmodel/film_note_viewmodel.dart';
 import '../models/note_model.dart'; 
 import '../models/film_note.dart'; 
 import 'profile_screen.dart';
+import '../screens/profile_screen_with_backup.dart';
+import '../services/backup_service.dart';
+import '../services/google_drive_service.dart';
+
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -196,7 +200,68 @@ void _showLocalNotification(String? title, String? body) {
               ),
 
             ),
-          ],
+            IconButton(
+              icon: const Icon(Icons.cloud_upload_outlined),
+              tooltip: "Backup ke Google Drive",
+                onPressed: () async {
+                try {
+                  final file = await BackupService().exportDataToJson();
+                  await GoogleDriveService().uploadJsonBackup(
+                    file,
+                    "mynoteplus_backup.json",
+                  );
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(
+                      content: Text(
+                        "✅ Backup berhasil diupload ke Google Drive",
+                      ),
+                    ),
+                  );
+                } catch (e) {
+                  ScaffoldMessenger.of(
+                    context,
+                  ).showSnackBar(SnackBar(content: Text("❌ Gagal backup: $e")));
+                }
+              },
+            ),
+            // 📥 Restore
+          IconButton(
+                icon: const Icon(Icons.cloud_download_outlined),
+                tooltip: "Restore dari Google Drive",
+                onPressed: () async {
+                  final confirmed = await showDialog<bool>(
+                    context: context,
+                    builder: (_) => AlertDialog(
+                      title: const Text("Konfirmasi Restore"),
+                      content: const Text("Data saat ini akan ditimpa. Lanjutkan?"),
+                      actions: [
+                        TextButton(
+                          onPressed: () => Navigator.pop(context, false),
+                          child: const Text("Batal"),
+                        ),
+                        ElevatedButton(
+                          onPressed: () => Navigator.pop(context, true),
+                          child: const Text("Restore"),
+                        ),
+                      ],
+                    ),
+                  );
+
+                  if (confirmed == true) {
+                    try {
+                      await BackupService().restoreFromJsonBackup();
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(content: Text("✅ Restore berhasil")),
+                      );
+                    } catch (e) {
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        SnackBar(content: Text("❌ Gagal restore: $e")),
+                      );
+                    }
+                  }
+                },
+              ),
+            ],
           bottom: selectedBottomTab == 0
               ? const TabBar(
                   tabs: [
@@ -211,10 +276,20 @@ void _showLocalNotification(String? title, String? body) {
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 300),
               child: selectedBottomTab == 0
-                  ? const TabBarView(
-                      children: [PersonalNotesContent(), FilmNotesContent()],
+                  ? Column(
+                      children: const [
+                        // HomeBackupSyncButtons(),
+                        Expanded(
+                          child: TabBarView(
+                            children: [
+                              PersonalNotesContent(),
+                              FilmNotesContent(),
+                            ],
+                          ),
+                        ),
+                      ],
                     )
-                  : const ProfileScreen(),
+                  : ProfileScreen(),
             ),
             if (showBanner)
               BannerWidget(

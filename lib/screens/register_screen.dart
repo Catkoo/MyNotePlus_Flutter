@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:mynoteplus/services/auth_service.dart';
 import 'package:google_fonts/google_fonts.dart';
 
 class RegisterScreen extends StatefulWidget {
@@ -78,7 +79,6 @@ class _RegisterScreenState extends State<RegisterScreen> {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
     return Scaffold(
       backgroundColor: const Color(0xFFF9F9F9),
       body: SafeArea(
@@ -97,14 +97,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 Text(
                   "Daftar Dulu Ya! 👤",
                   style: GoogleFonts.poppins(
-                    fontSize: 20,
-                    fontWeight: FontWeight.w600,
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
                     color: Colors.indigo[800],
                   ),
                 ),
                 const SizedBox(height: 8),
                 Text(
-                  "Buat akun baru MyNotePlus",
+                  "Buat akun baru untuk mulai mencatat",
                   style: GoogleFonts.poppins(
                     fontSize: 14,
                     color: Colors.grey[600],
@@ -113,83 +113,37 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 const SizedBox(height: 32),
 
                 // Nama
-                TextField(
-                  controller: _nameController,
-                  decoration: InputDecoration(
-                    labelText: "Nama Lengkap",
-                    prefixIcon: const Icon(Icons.person),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
-                ),
+                _buildTextField("Nama Lengkap", Icons.person, _nameController),
                 const SizedBox(height: 16),
 
                 // Email
-                TextField(
-                  controller: _emailController,
+                _buildTextField(
+                  "Email",
+                  Icons.email_outlined,
+                  _emailController,
                   keyboardType: TextInputType.emailAddress,
-                  decoration: InputDecoration(
-                    labelText: "Email",
-                    prefixIcon: const Icon(Icons.email_outlined),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
                 ),
                 const SizedBox(height: 16),
 
                 // Password
-                TextField(
-                  controller: _passwordController,
-                  obscureText: !_passwordVisible,
-                  decoration: InputDecoration(
-                    labelText: "Password (min. 8 karakter)",
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _passwordVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: () =>
-                          setState(() => _passwordVisible = !_passwordVisible),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
+                _buildPasswordField(
+                  "Password (min. 8 karakter)",
+                  _passwordController,
+                  _passwordVisible,
+                  () {
+                    setState(() => _passwordVisible = !_passwordVisible);
+                  },
                 ),
                 const SizedBox(height: 16),
 
                 // Konfirmasi Password
-                TextField(
-                  controller: _confirmController,
-                  obscureText: !_confirmVisible,
-                  decoration: InputDecoration(
-                    labelText: "Konfirmasi Password",
-                    prefixIcon: const Icon(Icons.lock_outline),
-                    suffixIcon: IconButton(
-                      icon: Icon(
-                        _confirmVisible
-                            ? Icons.visibility
-                            : Icons.visibility_off,
-                      ),
-                      onPressed: () =>
-                          setState(() => _confirmVisible = !_confirmVisible),
-                    ),
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    filled: true,
-                    fillColor: Colors.white,
-                  ),
+                _buildPasswordField(
+                  "Konfirmasi Password",
+                  _confirmController,
+                  _confirmVisible,
+                  () {
+                    setState(() => _confirmVisible = !_confirmVisible);
+                  },
                 ),
                 const SizedBox(height: 24),
 
@@ -220,8 +174,51 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   ),
                 ),
 
-                const SizedBox(height: 24),
+                const SizedBox(height: 16),
+                Text(
+                  "atau",
+                  style: GoogleFonts.poppins(color: Colors.grey[600]),
+                ),
 
+                const SizedBox(height: 16),
+
+                // Tombol Google
+                SizedBox(
+                  width: double.infinity,
+                  height: 48,
+                  child: OutlinedButton.icon(
+                      onPressed: () async {
+                      setState(() => _isLoading = true);
+                      try {
+                        final user = await AuthService().signInWithGoogle(
+                          isRegister: true,
+                        );
+                        if (user != null) {
+                          _showToast("Pendaftaran berhasil!");
+                          Navigator.pushReplacementNamed(context, '/');
+                        }
+                      } catch (e) {
+                        _showToast(e.toString().replaceAll('Exception: ', ''));
+                      }
+                      setState(() => _isLoading = false);
+                    },
+                    icon: Image.asset(
+                      "lib/assets/google.png",
+                      height: 24,
+                    ),
+                    label: const Text("Daftar dengan Google"),
+                    style: OutlinedButton.styleFrom(
+                      side: const BorderSide(color: Colors.grey),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      foregroundColor: Colors.black87,
+                      backgroundColor: Colors.white,
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
                 TextButton(
                   onPressed: () =>
                       Navigator.pushReplacementNamed(context, '/login'),
@@ -231,6 +228,48 @@ class _RegisterScreenState extends State<RegisterScreen> {
             ),
           ),
         ),
+      ),
+    );
+  }
+
+  Widget _buildTextField(
+    String label,
+    IconData icon,
+    TextEditingController controller, {
+    TextInputType keyboardType = TextInputType.text,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: Icon(icon),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.white,
+      ),
+    );
+  }
+
+  Widget _buildPasswordField(
+    String label,
+    TextEditingController controller,
+    bool isVisible,
+    VoidCallback onToggle,
+  ) {
+    return TextField(
+      controller: controller,
+      obscureText: !isVisible,
+      decoration: InputDecoration(
+        labelText: label,
+        prefixIcon: const Icon(Icons.lock_outline),
+        suffixIcon: IconButton(
+          icon: Icon(isVisible ? Icons.visibility : Icons.visibility_off),
+          onPressed: onToggle,
+        ),
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        filled: true,
+        fillColor: Colors.white,
       ),
     );
   }

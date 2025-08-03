@@ -6,10 +6,10 @@ import 'package:provider/provider.dart';
 import 'package:url_launcher/url_launcher.dart';
 import '../screens/change_email_dialog.dart';
 import '../screens/change_password_dialog.dart';
+import '../services/auth_service.dart';
 import '../viewmodel/note_view_model.dart';
 import '../viewmodel/film_note_viewmodel.dart';
-import '../widgets/theme_provider.dart'; 
-
+import '../widgets/theme_provider.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -57,12 +57,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   void _logout() async {
-    // Bersihkan data dan listener
     context.read<NoteViewModel>().clear();
     context.read<FilmNoteViewModel>().clear();
-
-    await FirebaseAuth.instance.signOut();
-
+    await AuthService().signOut();
     if (mounted) {
       ScaffoldMessenger.of(
         context,
@@ -70,6 +67,39 @@ class _ProfileScreenState extends State<ProfileScreen> {
       Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
     }
   }
+
+  void _linkGoogle() async {
+    try {
+      await AuthService().linkWithGoogle();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Berhasil menautkan akun Google')),
+        );
+        setState(() {});
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Gagal menautkan akun Google: $e')),
+      );
+    }
+  }
+
+  void _unlinkGoogle() async {
+    try {
+      await AuthService().unlinkGoogle();
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Akun Google berhasil dilepas')),
+        );
+        setState(() {});
+      }
+    } catch (e) {
+      ScaffoldMessenger.of(
+        context,
+      ).showSnackBar(SnackBar(content: Text('Gagal melepas akun Google: $e')));
+    }
+  }
+
   void _openHelpForm() async {
     const url = 'https://forms.gle/eDwfXp58cFaYrths5';
     final uri = Uri.parse(url);
@@ -86,6 +116,8 @@ class _ProfileScreenState extends State<ProfileScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isGoogleLinked =
+        user?.providerData.any((p) => p.providerId == 'google.com') ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -131,6 +163,17 @@ class _ProfileScreenState extends State<ProfileScreen> {
                             color: Colors.white,
                           ),
                         ),
+                        if (isGoogleLinked)
+                          Padding(
+                            padding: const EdgeInsets.only(top: 4),
+                            child: Text(
+                              'Tertaut dengan Google',
+                              style: theme.textTheme.bodySmall?.copyWith(
+                                color: Colors.white70,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ),
                       ],
                     ),
                   ),
@@ -170,6 +213,25 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 32),
                   Text("Keamanan", style: theme.textTheme.titleMedium),
                   const SizedBox(height: 12),
+                  if (!isGoogleLinked)
+                    FilledButton.icon(
+                      icon: const Icon(Icons.link),
+                      onPressed: _linkGoogle,
+                      label: const Text("Tautkan dengan Akun Google"),
+                    ),
+                  if (isGoogleLinked)
+                    FilledButton.icon(
+                      icon: const Icon(Icons.link_off),
+                      onPressed: _unlinkGoogle,
+                      label: const Text("Lepas Akun Google"),
+                      style: FilledButton.styleFrom(
+                        backgroundColor: theme.colorScheme.error.withOpacity(
+                          0.9,
+                        ),
+                        foregroundColor: Colors.white,
+                      ),
+                    ),
+                  const SizedBox(height: 8),
                   FilledButton.icon(
                     icon: const Icon(Icons.email_outlined),
                     onPressed: _showChangeEmailDialog,
@@ -233,7 +295,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   const SizedBox(height: 32),
                   Center(
                     child: Text(
-                      'Versi 1.0.2',
+                      'Versi 1.0.3',
                       style: theme.textTheme.bodySmall?.copyWith(
                         fontWeight: FontWeight.bold,
                         color: Colors.grey,
@@ -246,12 +308,12 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-  void _showChangeEmailDialog() {
-    showDialog(
-      context: context,
-      builder: (_) => ChangeEmailDialog(user: user!),
+void _showChangeEmailDialog() {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(content: Text("Fitur ini akan segera hadir")),
     );
   }
+
 
   void _showChangePasswordDialog() {
     showDialog(context: context, builder: (_) => const ChangePasswordDialog());
