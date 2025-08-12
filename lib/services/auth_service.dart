@@ -27,7 +27,7 @@ class AuthService {
   }
 
   /// ✅ Login / Register dengan Google
-  Future<UserCredential?> signInWithGoogle({required bool isRegister}) async {
+Future<UserCredential?> signInWithGoogle({required bool isRegister}) async {
     final googleUser = await GoogleSignIn().signIn();
     if (googleUser == null) return null;
 
@@ -97,14 +97,14 @@ class AuthService {
   }
 
   /// ✅ Simpan atau update user di Firestore
-  Future<void> _saveUserToFirestore(User user) async {
+Future<void> _saveUserToFirestore(User user) async {
     final ref = _firestore.collection('users').doc(user.uid);
     final doc = await ref.get();
 
     final userData = {
       'uid': user.uid,
-      'email': user.email,
-      'displayName': user.displayName ?? '',
+      'email': user.email ?? '',
+      'name': user.displayName ?? '',
       'photoURL': user.photoURL ?? '',
       'linkedWithGoogle': user.providerData.any(
         (p) => p.providerId == 'google.com',

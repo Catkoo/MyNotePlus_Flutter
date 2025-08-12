@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart'; // untuk TapGestureRecognizer
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import 'package:google_fonts/google_fonts.dart';
@@ -19,6 +20,7 @@ class _LoginScreenState extends State<LoginScreen> {
   final _passwordController = TextEditingController();
   bool _passwordVisible = false;
   bool _isLoading = false;
+  bool _isChecked = false; // checkbox persetujuan
 
   @override
   void initState() {
@@ -48,6 +50,13 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _login() async {
+    if (!_isChecked) {
+      _showToast(
+        "Anda harus menyetujui Kebijakan Privasi dan Peraturan Penggunaan.",
+      );
+      return;
+    }
+
     final email = _emailController.text.trim();
     final password = _passwordController.text;
 
@@ -81,11 +90,16 @@ class _LoginScreenState extends State<LoginScreen> {
   }
 
   Future<void> _signInWithGoogle() async {
+    if (!_isChecked) {
+      _showToast(
+        "Anda harus menyetujui Kebijakan Privasi dan Peraturan Penggunaan.",
+      );
+      return;
+    }
+
     setState(() => _isLoading = true);
     try {
-      final user = await AuthService().signInWithGoogle(
-        isRegister: false,
-      ); // tambahkan ini
+      final user = await AuthService().signInWithGoogle(isRegister: false);
 
       if (user != null) {
         final prefs = await SharedPreferences.getInstance();
@@ -100,13 +114,10 @@ class _LoginScreenState extends State<LoginScreen> {
         _showToast("Login Google berhasil");
       }
     } catch (e) {
-      _showToast(
-        e.toString(),
-      ); // agar pesan error terlihat jelas, misal "akun belum terdaftar"
+      _showToast(e.toString());
     }
     setState(() => _isLoading = false);
   }
-
 
   Future<void> _resetPassword() async {
     final email = _emailController.text.trim();
@@ -215,7 +226,65 @@ class _LoginScreenState extends State<LoginScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 8),
+
+                  const SizedBox(height: 12),
+
+                  // Checkbox persetujuan dengan link terpisah
+                  Row(
+                    children: [
+                      Checkbox(
+                        value: _isChecked,
+                        onChanged: (val) {
+                          setState(() {
+                            _isChecked = val ?? false;
+                          });
+                        },
+                      ),
+                      Expanded(
+                        child: Text.rich(
+                          TextSpan(
+                            text: "Saya setuju dengan ",
+                            style: TextStyle(color: Colors.black87),
+                            children: [
+                              TextSpan(
+                                text: "Kebijakan Privasi",
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/privacy_policy',
+                                    );
+                                  },
+                              ),
+                              const TextSpan(text: " dan "),
+                              TextSpan(
+                                text: "Peraturan Penggunaan",
+                                style: const TextStyle(
+                                  color: Colors.blue,
+                                  decoration: TextDecoration.underline,
+                                ),
+                                recognizer: TapGestureRecognizer()
+                                  ..onTap = () {
+                                    Navigator.pushNamed(
+                                      context,
+                                      '/terms_of_use',
+                                    );
+                                  },
+                              ),
+                              const TextSpan(text: "."),
+                            ],
+                          ),
+                        ),
+                      ),
+                    ],
+                  ),
+
+                  const SizedBox(height: 12),
+
                   Align(
                     alignment: Alignment.centerRight,
                     child: TextButton(
@@ -223,12 +292,13 @@ class _LoginScreenState extends State<LoginScreen> {
                       child: const Text("Lupa password?"),
                     ),
                   ),
+
                   const SizedBox(height: 12),
                   SizedBox(
                     width: double.infinity,
                     height: 48,
                     child: ElevatedButton(
-                      onPressed: _isLoading ? null : _login,
+                      onPressed: (_isLoading || !_isChecked) ? null : _login,
                       style: ElevatedButton.styleFrom(
                         backgroundColor: Colors.indigo,
                         foregroundColor: Colors.white,
@@ -260,7 +330,9 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                   const SizedBox(height: 16),
                   OutlinedButton.icon(
-                    onPressed: _isLoading ? null : _signInWithGoogle,
+                    onPressed: (_isLoading || !_isChecked)
+                        ? null
+                        : _signInWithGoogle,
                     icon: Image.asset('lib/assets/google.png', height: 24),
                     label: const Text("Masuk dengan Google"),
                     style: OutlinedButton.styleFrom(

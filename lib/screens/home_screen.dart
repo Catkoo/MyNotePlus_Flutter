@@ -449,10 +449,7 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
                               );
                               return;
                             }
-                            Navigator.pop(
-                              context,
-                              note.isLocked ? "" : pin,
-                            ); // "" = buka kunci
+                            Navigator.pop(context, note.isLocked ? "" : pin);
                           },
                           child: Text(note.isLocked ? "Buka" : "Kunci"),
                         ),
@@ -494,15 +491,22 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Consumer<NoteViewModel>(
       builder: (context, viewModel, _) {
         final allNotes = viewModel.notes;
         final filteredNotes =
             allNotes
                 .where(
-                  (note) => note.title.toLowerCase().contains(
-                    _searchQuery.toLowerCase(),
-                  ),
+                  (note) =>
+                      note.title.toLowerCase().contains(
+                        _searchQuery.toLowerCase(),
+                      ) ||
+                      note.content.toLowerCase().contains(
+                        _searchQuery.toLowerCase(),
+                      ),
                 )
                 .toList()
               ..sort((a, b) {
@@ -523,56 +527,112 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
                   hintText: "Cari catatan...",
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: isDark ? Colors.grey[800] : Colors.grey[100],
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
+                  hintStyle: TextStyle(
+                    color: isDark ? Colors.white54 : Colors.black54,
+                  ),
+                  prefixIconColor: isDark ? Colors.white54 : Colors.black54,
                 ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
               ),
             ),
             Expanded(
               child: filteredNotes.isEmpty
-                  ? const Center(child: Text("Catatan tidak ditemukan."))
-                  : ListView.builder(
-                      itemCount: filteredNotes.length,
+                  ? Center(
+                      child: Text(
+                        "Catatan tidak ditemukan.",
+                        style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    )
+                  : GridView.builder(
                       padding: const EdgeInsets.symmetric(horizontal: 16),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 1.2,
+                          ),
+                      itemCount: filteredNotes.length,
                       itemBuilder: (context, index) {
                         final note = filteredNotes[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          elevation: 2,
-                          child: ListTile(
-                            leading: note.isPinned
-                                ? const Icon(
-                                    Icons.push_pin,
-                                    color: Colors.amber,
-                                  )
-                                : null,
-                            title: Text(note.title),
-                            subtitle: Text(
-                              note.isLocked ? '****' : note.content,
-                              maxLines: 2,
-                              overflow: TextOverflow.ellipsis,
-                            ),
-                            onTap: () {
-                              if (note.isLocked) {
-                                _showPinDialog(context, note.pin!, () {
-                                  Navigator.pushNamed(
-                                    context,
-                                    '/detail_note',
-                                    arguments: note.id,
-                                  );
-                                });
-                              } else {
+                        return GestureDetector(
+                          onTap: () {
+                            if (note.isLocked) {
+                              _showPinDialog(context, note.pin!, () {
                                 Navigator.pushNamed(
                                   context,
                                   '/detail_note',
                                   arguments: note.id,
                                 );
-                              }
-                            },
-                            onLongPress: () => _showNoteOptions(context, note),
+                              });
+                            } else {
+                              Navigator.pushNamed(
+                                context,
+                                '/detail_note',
+                                arguments: note.id,
+                              );
+                            }
+                          },
+                          onLongPress: () => _showNoteOptions(context, note),
+                          child: Container(
+                            padding: const EdgeInsets.all(12),
+                            decoration: BoxDecoration(
+                              color: isDark
+                                  ? theme.colorScheme.surfaceVariant
+                                  : Colors.white,
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isDark
+                                      ? Colors.black.withOpacity(0.3)
+                                      : Colors.black.withOpacity(0.05),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
+                            ),
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.start,
+                              children: [
+                                if (note.isPinned)
+                                  const Icon(
+                                    Icons.push_pin,
+                                    color: Colors.amber,
+                                    size: 18,
+                                  ),
+                                Text(
+                                  note.title,
+                                  style: TextStyle(
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: isDark ? Colors.white : Colors.black,
+                                  ),
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
+                                ),
+                                const SizedBox(height: 6),
+                                Expanded(
+                                  child: Text(
+                                    note.isLocked ? '****' : note.content,
+                                    maxLines: 4,
+                                    overflow: TextOverflow.ellipsis,
+                                    style: TextStyle(
+                                      fontSize: 14,
+                                      color: isDark
+                                          ? Colors.white70
+                                          : Colors.black87,
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         );
                       },
@@ -646,6 +706,9 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return Consumer<FilmNoteViewModel>(
       builder: (context, viewModel, _) {
         final allNotes = viewModel.filmNotes;
@@ -658,7 +721,6 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                 )
                 .toList()
               ..sort((a, b) {
-                // Pinned di atas, lalu terbaru
                 if (a.isPinned != b.isPinned) {
                   return b.isPinned ? 1 : -1;
                 }
@@ -676,52 +738,117 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                   hintText: "Cari film/drama...",
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
-                  fillColor: Colors.grey[100],
+                  fillColor: isDark ? Colors.grey[800] : Colors.grey[100],
                   border: OutlineInputBorder(
                     borderRadius: BorderRadius.circular(12),
                     borderSide: BorderSide.none,
                   ),
+                  hintStyle: TextStyle(
+                    color: isDark ? Colors.white54 : Colors.black54,
+                  ),
+                  prefixIconColor: isDark ? Colors.white54 : Colors.black54,
                 ),
+                style: TextStyle(color: isDark ? Colors.white : Colors.black),
               ),
             ),
             Expanded(
               child: filteredNotes.isEmpty
-                  ? const Center(child: Text("Film/drama tidak ditemukan."))
-                  : ListView.builder(
+                  ? Center(
+                      child: Text(
+                        "Film/drama tidak ditemukan.",
+                        style: TextStyle(
+                          color: isDark ? Colors.white70 : Colors.black54,
+                        ),
+                      ),
+                    )
+                  : GridView.builder(
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       itemCount: filteredNotes.length,
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      gridDelegate:
+                          const SliverGridDelegateWithFixedCrossAxisCount(
+                            crossAxisCount: 2,
+                            crossAxisSpacing: 12,
+                            mainAxisSpacing: 12,
+                            childAspectRatio: 3 / 2,
+                          ),
                       itemBuilder: (context, index) {
                         final note = filteredNotes[index];
-                        return Card(
-                          margin: const EdgeInsets.symmetric(vertical: 8),
-                          elevation: 2,
-                          color: note.isFinished ? Colors.green[50] : null,
-                          child: ListTile(
-                            leading: note.isPinned
-                                ? const Icon(
-                                    Icons.push_pin,
-                                    color: Colors.amber,
-                                  )
-                                : null,
-                            title: Text(note.title),
-                            subtitle: Text(
-                              "Tahun: ${note.year}  •  Episode: ${note.episodeWatched}",
+                        return GestureDetector(
+                          onTap: () {
+                            Navigator.pushNamed(
+                              context,
+                              '/detail_film_note',
+                              arguments: note.id,
+                            );
+                          },
+                          onLongPress: () =>
+                              _showFilmNoteOptions(context, note),
+                          child: Card(
+                            elevation: 2,
+                            color: note.isFinished
+                                ? (isDark
+                                      ? Colors.green[900]
+                                      : Colors.green[50])
+                                : (isDark
+                                      ? theme.colorScheme.surfaceVariant
+                                      : Colors.white),
+                            child: Padding(
+                              padding: const EdgeInsets.all(12),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  if (note.isPinned)
+                                    const Icon(
+                                      Icons.push_pin,
+                                      color: Colors.amber,
+                                      size: 18,
+                                    ),
+                                  Text(
+                                    note.title,
+                                    style: TextStyle(
+                                      fontWeight: FontWeight.bold,
+                                      fontSize: 14,
+                                      color: isDark
+                                          ? Colors.white
+                                          : Colors.black,
+                                    ),
+                                    maxLines: 2,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                  const Spacer(),
+                                  Text(
+                                    "Tahun: ${note.year}",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? Colors.white70
+                                          : Colors.black54,
+                                    ),
+                                  ),
+                                  Text(
+                                    "Episode: ${note.episodeWatched}",
+                                    style: TextStyle(
+                                      fontSize: 12,
+                                      color: isDark
+                                          ? Colors.white70
+                                          : Colors.black54,
+                                    ),
+                                  ),
+                                  if (note.isFinished)
+                                    const Align(
+                                      alignment: Alignment.bottomRight,
+                                      child: Icon(
+                                        Icons.check_circle,
+                                        color: Colors.green,
+                                        size: 16,
+                                      ),
+                                    ),
+                                ],
+                              ),
                             ),
-                            trailing: note.isFinished
-                                ? const Icon(
-                                    Icons.check_circle,
-                                    color: Colors.green,
-                                  )
-                                : null,
-                            onTap: () {
-                              Navigator.pushNamed(
-                                context,
-                                '/detail_film_note',
-                                arguments: note.id,
-                              );
-                            },
-                            onLongPress: () =>
-                                _showFilmNoteOptions(context, note),
                           ),
                         );
                       },
@@ -733,7 +860,6 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
     );
   }
 }
-
 
 class MaintenanceScreen extends StatelessWidget {
   final String message;
@@ -801,18 +927,28 @@ class BannerWidget extends StatelessWidget {
             borderRadius: BorderRadius.circular(12),
           ),
           child: Column(
+            mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
               Text(
                 message,
-                style: const TextStyle(fontWeight: FontWeight.bold),
+                style: const TextStyle(
+                  fontWeight: FontWeight.bold,
+                  fontSize: 16,
+                ),
               ),
               const SizedBox(height: 8),
-              Text(changelog),
+              SizedBox(
+                height: 120, // batas tinggi untuk area changelog
+                child: SingleChildScrollView(
+                  child: Text(changelog, style: const TextStyle(fontSize: 14)),
+                ),
+              ),
+              const SizedBox(height: 8),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                TextButton(
+                  TextButton(
                     onPressed: () async {
                       final uri = Uri.parse(url);
                       if (await canLaunchUrl(uri)) {
@@ -830,7 +966,6 @@ class BannerWidget extends StatelessWidget {
                     },
                     child: const Text("Update"),
                   ),
-
                   TextButton(onPressed: onClose, child: const Text("Tutup")),
                 ],
               ),

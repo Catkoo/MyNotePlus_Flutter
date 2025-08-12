@@ -11,6 +11,8 @@ import 'services/notification_helper.dart';
 import 'viewmodel/note_view_model.dart';
 import 'viewmodel/film_note_viewmodel.dart';
 import 'widgets/theme_provider.dart';
+import 'services/backup_service.dart';
+import 'services/google_drive_service.dart';
 
 // Screens...
 import 'screens/splash_screen.dart';
@@ -25,6 +27,8 @@ import 'screens/add_filim_screen.dart';
 import 'screens/edit_filim_screen.dart';
 import 'screens/detail_filim_screen.dart';
 import 'screens/notification_screen.dart';
+import 'screens/privacy_policy_screen.dart';
+import 'screens/terms_of_use.dart';
 
 /// 🔔 Handler pesan dari FCM saat background
 Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
@@ -88,6 +92,23 @@ void main() async {
   // ✅ Load tema awal
   final isDarkMode = await ThemeProvider.loadInitialTheme();
 
+  // 🆕 Auto-backup saat startup (jika sudah login Google)
+  try {
+    final googleUser = await GoogleDriveService().googleSignIn.signInSilently();
+    if (googleUser != null) {
+      final file = await BackupService().exportDataToJson();
+      await GoogleDriveService().uploadJsonBackup(
+        file,
+        "mynoteplus_backup.json",
+      );
+      debugPrint("✅ Auto-backup sukses saat startup");
+    } else {
+      debugPrint("ℹ️ Auto-backup dilewati: user belum login Google");
+    }
+  } catch (e) {
+    debugPrint("❌ Auto-backup gagal: $e");
+  }
+
   runApp(MyNotePlusApp(isDarkMode: isDarkMode));
 }
 
@@ -137,6 +158,8 @@ class MyNotePlusApp extends StatelessWidget {
               '/add_film_note': (context) => const AddFilmNoteScreen(),
               '/profile': (context) => const ProfileScreen(),
               '/notification': (context) => const NotificationScreen(),
+              '/privacy_policy': (context) => const PrivacyPolicyScreen(),
+              '/terms_of_use': (context) => const TermsOfUseScreen(),
             },
             onGenerateRoute: (settings) {
               final args = settings.arguments;

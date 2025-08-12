@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/gestures.dart'; // untuk TapGestureRecognizer
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:mynoteplus/services/auth_service.dart';
@@ -24,6 +25,8 @@ class _RegisterScreenState extends State<RegisterScreen> {
   bool _confirmVisible = false;
   bool _isLoading = false;
 
+  bool _isChecked = false; // Checkbox persetujuan ditambahkan
+
   void _showToast(String msg) {
     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(msg)));
   }
@@ -33,6 +36,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final email = _emailController.text.trim();
     final pass = _passwordController.text;
     final confirm = _confirmController.text;
+
+    if (!_isChecked) {
+      _showToast(
+        "Anda harus menyetujui Kebijakan Privasi dan Peraturan Penggunaan.",
+      );
+      return;
+    }
 
     if (name.isEmpty || email.isEmpty || pass.isEmpty || confirm.isEmpty) {
       _showToast("Harap isi semua data");
@@ -145,6 +155,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
                     setState(() => _confirmVisible = !_confirmVisible);
                   },
                 ),
+
+                const SizedBox(height: 12),
+
+                // Checkbox persetujuan dengan link klik terpisah
+                Row(
+                  children: [
+                    Checkbox(
+                      value: _isChecked,
+                      onChanged: (val) {
+                        setState(() {
+                          _isChecked = val ?? false;
+                        });
+                      },
+                    ),
+                    Expanded(
+                      child: Text.rich(
+                        TextSpan(
+                          text: "Saya setuju dengan ",
+                          style: TextStyle(color: Colors.black87),
+                          children: [
+                            TextSpan(
+                              text: "Kebijakan Privasi",
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  Navigator.pushNamed(
+                                    context,
+                                    '/privacy_policy',
+                                  );
+                                },
+                            ),
+                            const TextSpan(text: " dan "),
+                            TextSpan(
+                              text: "Peraturan Penggunaan",
+                              style: const TextStyle(
+                                color: Colors.blue,
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                                ..onTap = () {
+                                  Navigator.pushNamed(context, '/terms_of_use');
+                                },
+                            ),
+                            const TextSpan(text: "."),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+
                 const SizedBox(height: 24),
 
                 // Tombol Daftar
@@ -152,7 +216,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   width: double.infinity,
                   height: 48,
                   child: ElevatedButton.icon(
-                    onPressed: _isLoading ? null : _register,
+                    onPressed: (_isLoading || !_isChecked) ? null : _register,
                     icon: _isLoading
                         ? const SizedBox(
                             height: 18,
@@ -170,11 +234,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(12),
                       ),
+                      // (optional) Atur warna saat disabled, tapi biasanya Flutter sudah bagus
                     ),
                   ),
                 ),
 
                 const SizedBox(height: 16),
+
+                // Teks "atau" di tengah
                 Text(
                   "atau",
                   style: GoogleFonts.poppins(color: Colors.grey[600]),
@@ -187,25 +254,30 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   width: double.infinity,
                   height: 48,
                   child: OutlinedButton.icon(
-                      onPressed: () async {
-                      setState(() => _isLoading = true);
-                      try {
-                        final user = await AuthService().signInWithGoogle(
-                          isRegister: true,
-                        );
-                        if (user != null) {
-                          _showToast("Pendaftaran berhasil!");
-                          Navigator.pushReplacementNamed(context, '/');
-                        }
-                      } catch (e) {
-                        _showToast(e.toString().replaceAll('Exception: ', ''));
-                      }
-                      setState(() => _isLoading = false);
-                    },
-                    icon: Image.asset(
-                      "lib/assets/google.png",
-                      height: 24,
-                    ),
+                    onPressed: (_isLoading || !_isChecked)
+                        ? null
+                        : () async {
+                            setState(() => _isLoading = true);
+                            try {
+                              final cred = await AuthService().signInWithGoogle(
+                                isRegister: true,
+                              );
+                              if (cred != null) {
+                                _showToast("Pendaftaran berhasil!");
+                                Navigator.pushNamedAndRemoveUntil(
+                                  context,
+                                  '/',
+                                  (route) => false,
+                                );
+                              }
+                            } catch (e) {
+                              _showToast(
+                                e.toString().replaceAll('Exception: ', ''),
+                              );
+                            }
+                            setState(() => _isLoading = false);
+                          },
+                    icon: Image.asset("lib/assets/google.png", height: 24),
                     label: const Text("Daftar dengan Google"),
                     style: OutlinedButton.styleFrom(
                       side: const BorderSide(color: Colors.grey),
@@ -214,6 +286,7 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       ),
                       foregroundColor: Colors.black87,
                       backgroundColor: Colors.white,
+                      // (optional) Atur style saat disabled juga jika mau custom
                     ),
                   ),
                 ),

@@ -7,32 +7,47 @@ class GoogleDriveService {
   final GoogleSignIn _googleSignIn = GoogleSignIn.standard(
     scopes: [drive.DriveApi.driveFileScope],
   );
-
+    GoogleSignIn get googleSignIn => _googleSignIn; // 🆕 Getter
   /// ✅ Upload file JSON ke Google Drive
-  Future<void> uploadJsonBackup(File file, String filename) async {
-    final googleUser =
-        await _googleSignIn.signInSilently() ?? await _googleSignIn.signIn();
-    if (googleUser == null) throw Exception("Pengguna belum login Google");
+    Future<void> uploadJsonBackup(File file, String filename) async {
+      final googleUser =
+          await _googleSignIn.signInSilently() ?? await _googleSignIn.signIn();
+      if (googleUser == null) throw Exception("Pengguna belum login Google");
 
-    final auth = await googleUser.authentication;
-    final client = GoogleAuthClient({
-      'Authorization': 'Bearer ${auth.accessToken}',
-    });
+      final auth = await googleUser.authentication;
+      final client = GoogleAuthClient({
+        'Authorization': 'Bearer ${auth.accessToken}',
+      });
 
-    final driveApi = drive.DriveApi(client);
-    final media = drive.Media(file.openRead(), file.lengthSync());
+      final driveApi = drive.DriveApi(client);
 
-    final driveFile = drive.File()
-      ..name = filename
-      ..mimeType = 'application/json';
+      // 🔍 Cek apakah file backup lama ada
+      final fileList = await driveApi.files.list(
+        q: "name = '$filename' and mimeType = 'application/json'",
+        spaces: 'drive',
+        $fields: 'files(id, name)',
+      );
 
-    final uploadedFile = await driveApi.files.create(
-      driveFile,
-      uploadMedia: media,
-    );
+      // 🗑️ Hapus file lama jika ada
+      if (fileList.files != null && fileList.files!.isNotEmpty) {
+        for (var oldFile in fileList.files!) {
+          await driveApi.files.delete(oldFile.id!);
+        }
+      }
 
-    print('✅ File berhasil diupload: ${uploadedFile.id}');
-  }
+      // ⬆️ Upload file baru
+      final media = drive.Media(file.openRead(), file.lengthSync());
+      final driveFile = drive.File()
+        ..name = filename
+        ..mimeType = 'application/json';
+
+      final uploadedFile = await driveApi.files.create(
+        driveFile,
+        uploadMedia: media,
+      );
+
+      print('✅ File berhasil diupload/replace: ${uploadedFile.id}');
+    }
 
   /// ✅ Download file backup JSON terbaru dari Google Drive
   Future<File?> downloadLatestBackup(String filename) async {

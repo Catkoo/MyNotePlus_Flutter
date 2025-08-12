@@ -10,6 +10,8 @@ import '../services/auth_service.dart';
 import '../viewmodel/note_view_model.dart';
 import '../viewmodel/film_note_viewmodel.dart';
 import '../widgets/theme_provider.dart';
+import '../screens/privacy_policy_screen.dart';
+
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -113,11 +115,45 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
+void _openDeleteAccountForm() async {
+    const url =
+        'https://forms.gle/5LHBo9szD2hCfsa48'; // Ganti dengan link form kamu
+    final uri = Uri.parse(url);
+
+    if (await canLaunchUrl(uri)) {
+      await launchUrl(uri, mode: LaunchMode.externalApplication);
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Gagal membuka formulir penghapusan akun'),
+        ),
+      );
+    }
+  }
+
+  Future<void> _showAddEmailPasswordDialog() async {
+    final result = await showDialog<bool>(
+      context: context,
+      builder: (_) => const AddEmailPasswordDialog(),
+    );
+    if (result == true) {
+      // reload user to reflect new provider
+      await FirebaseAuth.instance.currentUser?.reload();
+      setState(() {});
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Email & password berhasil ditambahkan')),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+
     final isGoogleLinked =
         user?.providerData.any((p) => p.providerId == 'google.com') ?? false;
+    final isEmailPasswordUser =
+        user?.providerData.any((p) => p.providerId == 'password') ?? false;
 
     return Scaffold(
       appBar: AppBar(
@@ -128,73 +164,66 @@ class _ProfileScreenState extends State<ProfileScreen> {
       body: isLoading
           ? const Center(child: CircularProgressIndicator())
           : SingleChildScrollView(
-              padding: const EdgeInsets.all(24),
+              padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 32),
               child: Column(
-                crossAxisAlignment: CrossAxisAlignment.stretch,
+                crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  Container(
-                    padding: const EdgeInsets.symmetric(vertical: 16),
-                    decoration: BoxDecoration(
-                      borderRadius: BorderRadius.circular(16),
-                      gradient: LinearGradient(
-                        colors: [
-                          theme.colorScheme.primary,
-                          theme.colorScheme.secondary,
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
-                    child: Column(
-                      children: [
-                        CircleAvatar(
-                          radius: 32,
-                          backgroundColor: Colors.white,
-                          child: Icon(
-                            Icons.person,
-                            size: 32,
-                            color: theme.colorScheme.primary,
-                          ),
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          user?.email ?? '-',
-                          style: theme.textTheme.bodyLarge?.copyWith(
-                            color: Colors.white,
-                          ),
-                        ),
-                        if (isGoogleLinked)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 4),
-                            child: Text(
-                              'Tertaut dengan Google',
-                              style: theme.textTheme.bodySmall?.copyWith(
-                                color: Colors.white70,
-                                fontStyle: FontStyle.italic,
-                              ),
-                            ),
-                          ),
-                      ],
+                  CircleAvatar(
+                    radius: 44,
+                    backgroundColor: theme.colorScheme.primaryContainer,
+                    child: Icon(
+                      Icons.person,
+                      size: 44,
+                      color: theme.colorScheme.onPrimaryContainer,
                     ),
                   ),
-                  const SizedBox(height: 24),
-                  Text("Informasi Akun", style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 16),
+                  Text(
+                    user?.email ?? '-',
+                    style: theme.textTheme.titleMedium?.copyWith(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                  if (isGoogleLinked)
+                    Padding(
+                      padding: const EdgeInsets.only(top: 6),
+                      child: Chip(
+                        label: const Text('Tertaut dengan Google'),
+                        avatar: Icon(
+                          Icons.link,
+                          color: theme.colorScheme.primary,
+                        ),
+                        backgroundColor: theme.colorScheme.primary.withOpacity(
+                          0.1,
+                        ),
+                      ),
+                    ),
+                  const SizedBox(height: 32),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text(
+                      "Informasi Akun",
+                      style: theme.textTheme.titleMedium,
+                    ),
+                  ),
                   const SizedBox(height: 12),
                   Card(
-                    elevation: 2,
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
+                    elevation: 3,
                     child: Padding(
                       padding: const EdgeInsets.all(20),
                       child: Column(
                         children: [
                           TextField(
                             controller: nameController,
-                            decoration: const InputDecoration(
+                            decoration: InputDecoration(
                               labelText: 'Nama Lengkap',
-                              prefixIcon: Icon(Icons.person),
-                              border: OutlineInputBorder(),
+                              prefixIcon: const Icon(Icons.person_outline),
+                              border: OutlineInputBorder(
+                                borderRadius: BorderRadius.circular(12),
+                              ),
                             ),
                           ),
                           const SizedBox(height: 16),
@@ -210,65 +239,167 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       ),
                     ),
                   ),
-                  const SizedBox(height: 32),
-                  Text("Keamanan", style: theme.textTheme.titleMedium),
+                  const SizedBox(height: 40),
+                  Align(
+                    alignment: Alignment.centerLeft,
+                    child: Text("Keamanan", style: theme.textTheme.titleMedium),
+                  ),
                   const SizedBox(height: 12),
-                  if (!isGoogleLinked)
+                  if (isGoogleLinked && !isEmailPasswordUser) ...[
                     FilledButton.icon(
                       icon: const Icon(Icons.link),
-                      onPressed: _linkGoogle,
-                      label: const Text("Tautkan dengan Akun Google"),
+                      onPressed: _showAddEmailPasswordDialog,
+                      label: const Text("Tambah Email & Password"),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
                     ),
-                  if (isGoogleLinked)
+                    const SizedBox(height: 8),
                     FilledButton.icon(
                       icon: const Icon(Icons.link_off),
-                      onPressed: _unlinkGoogle,
+                      onPressed: null, // disabled
                       label: const Text("Lepas Akun Google"),
                       style: FilledButton.styleFrom(
                         backgroundColor: theme.colorScheme.error.withOpacity(
-                          0.9,
+                          0.6,
                         ),
-                        foregroundColor: Colors.white,
+                        foregroundColor: Colors.white.withOpacity(0.7),
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
                       ),
                     ),
-                  const SizedBox(height: 8),
-                  FilledButton.icon(
-                    icon: const Icon(Icons.email_outlined),
-                    onPressed: _showChangeEmailDialog,
-                    label: const Text("Ubah Email"),
-                  ),
-                  const SizedBox(height: 8),
-                  FilledButton.icon(
-                    icon: const Icon(Icons.lock_outline),
-                    onPressed: _showChangePasswordDialog,
-                    label: const Text("Ubah Password"),
-                  ),
-                  const SizedBox(height: 8),
-                  TextButton.icon(
-                    icon: const Icon(Icons.lock_reset),
-                    onPressed: () {
-                      final email = user?.email;
-                      if (email != null) {
-                        FirebaseAuth.instance.sendPasswordResetEmail(
-                          email: email,
-                        );
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text("Link reset dikirim ke email"),
+                    Tooltip(
+                      message:
+                          'Tambahkan email & password dulu agar bisa lepaskan Google',
+                      child: const SizedBox(height: 0),
+                    ),
+                  ] else if (isEmailPasswordUser) ...[
+                    if (!isGoogleLinked)
+                      FilledButton.icon(
+                        icon: const Icon(Icons.link),
+                        onPressed: _linkGoogle,
+                        label: const Text("Tautkan dengan Akun Google"),
+                        style: FilledButton.styleFrom(
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
                           ),
-                        );
-                      }
+                        ),
+                      ),
+                    if (isGoogleLinked)
+                      FilledButton.icon(
+                        icon: const Icon(Icons.link_off),
+                        onPressed: _unlinkGoogle,
+                        label: const Text("Lepas Akun Google"),
+                        style: FilledButton.styleFrom(
+                          backgroundColor: theme.colorScheme.error.withOpacity(
+                            0.9,
+                          ),
+                          foregroundColor: Colors.white,
+                          minimumSize: const Size.fromHeight(50),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
+                      ),
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.email_outlined),
+                      onPressed: _showChangeEmailDialog,
+                      label: const Text("Ubah Email"),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    FilledButton.icon(
+                      icon: const Icon(Icons.lock_outline),
+                      onPressed: _showChangePasswordDialog,
+                      label: const Text("Ubah Password"),
+                      style: FilledButton.styleFrom(
+                        minimumSize: const Size.fromHeight(50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(height: 8),
+                    TextButton.icon(
+                      icon: const Icon(Icons.lock_reset),
+                      onPressed: () {
+                        final email = user?.email;
+                        if (email != null) {
+                          FirebaseAuth.instance.sendPasswordResetEmail(
+                            email: email,
+                          );
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Text("Link reset dikirim ke email"),
+                            ),
+                          );
+                        }
+                      },
+                      label: const Text("Lupa Password?"),
+                    ),
+                  ],
+                  const SizedBox(height: 16),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.privacy_tip_outlined, color: Colors.white),
+                    label: const Text(
+                      'Kebijakan Privasi',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.deepPurple,
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
+                      );
                     },
-                    label: const Text("Lupa Password?"),
                   ),
-                  const Divider(height: 40),
+                  const Divider(height: 48),
                   FilledButton.icon(
                     icon: const Icon(Icons.help_outline),
                     onPressed: _openHelpForm,
                     label: const Text("Bantuan / Hubungi Kami"),
+                    style: FilledButton.styleFrom(
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
                   ),
-                  SwitchListTile(
-                    contentPadding: const EdgeInsets.symmetric(horizontal: 12),
+                  const SizedBox(height: 8),
+                  FilledButton.icon(
+                    icon: const Icon(Icons.delete_forever),
+                    label: const Text('Ajukan Hapus Akun'),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.redAccent,
+                      foregroundColor: Colors.white,
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                    ),
+                    onPressed: _openDeleteAccountForm,
+                  ),
+                  const SizedBox(height: 16),
+                  SwitchListTile.adaptive(
+                    contentPadding: EdgeInsets.zero,
                     title: const Text('Mode Gelap'),
                     secondary: const Icon(Icons.dark_mode),
                     value: context.watch<ThemeProvider>().isDarkMode,
@@ -278,28 +409,30 @@ class _ProfileScreenState extends State<ProfileScreen> {
                     shape: RoundedRectangleBorder(
                       borderRadius: BorderRadius.circular(16),
                     ),
-                    tileColor: Theme.of(
-                      context,
-                    ).colorScheme.surfaceVariant.withOpacity(0.5),
+                    tileColor: theme.colorScheme.surfaceVariant.withOpacity(
+                      0.5,
+                    ),
                   ),
-                  const SizedBox(height: 16),
+                  const SizedBox(height: 24),
                   OutlinedButton.icon(
                     icon: const Icon(Icons.logout),
                     label: const Text("Logout"),
                     style: OutlinedButton.styleFrom(
                       foregroundColor: theme.colorScheme.error,
                       side: BorderSide(color: theme.colorScheme.error),
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
                     ),
                     onPressed: _logout,
                   ),
-                  const SizedBox(height: 32),
-                  Center(
-                    child: Text(
-                      'Versi 1.0.3',
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                        color: Colors.grey,
-                      ),
+                  const SizedBox(height: 24),
+                  Text(
+                    'Versi 1.0.4',
+                    style: theme.textTheme.bodySmall?.copyWith(
+                      fontWeight: FontWeight.bold,
+                      color: Colors.grey,
                     ),
                   ),
                 ],
@@ -308,14 +441,151 @@ class _ProfileScreenState extends State<ProfileScreen> {
     );
   }
 
-void _showChangeEmailDialog() {
+  void _showChangeEmailDialog() {
     ScaffoldMessenger.of(context).showSnackBar(
       const SnackBar(content: Text("Fitur ini akan segera hadir")),
     );
   }
 
-
   void _showChangePasswordDialog() {
     showDialog(context: context, builder: (_) => const ChangePasswordDialog());
+  }
+}
+
+class AddEmailPasswordDialog extends StatefulWidget {
+  const AddEmailPasswordDialog({super.key});
+
+  @override
+  State<AddEmailPasswordDialog> createState() => _AddEmailPasswordDialogState();
+}
+
+class _AddEmailPasswordDialogState extends State<AddEmailPasswordDialog> {
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+  bool isLoading = false;
+  String? errorMessage;
+
+  Future<void> _linkEmailPassword() async {
+    setState(() {
+      isLoading = true;
+      errorMessage = null;
+    });
+
+    final user = FirebaseAuth.instance.currentUser;
+    if (user == null) {
+      setState(() {
+        isLoading = false;
+        errorMessage = "User tidak ditemukan";
+      });
+      return;
+    }
+
+    final email = emailController.text.trim();
+    final password = passwordController.text.trim();
+
+    if (email.isEmpty || password.isEmpty) {
+      setState(() {
+        isLoading = false;
+        errorMessage = "Email dan password wajib diisi";
+      });
+      return;
+    }
+
+    final currentUserEmail = user.email ?? '';
+    final currentDomain = currentUserEmail.split('@').last.toLowerCase();
+    final inputDomain = email.split('@').last.toLowerCase();
+    if (inputDomain != currentDomain) {
+      setState(() {
+        isLoading = false;
+        errorMessage =
+            "Email harus menggunakan domain yang sama dengan akun Google Anda ($currentDomain)";
+      });
+      return;
+    }
+
+    if (password.length < 8) {
+      setState(() {
+        isLoading = false;
+        errorMessage = "Password harus minimal 8 karakter";
+      });
+      return;
+    }
+
+    try {
+      final credential = EmailAuthProvider.credential(
+        email: email,
+        password: password,
+      );
+      await user.linkWithCredential(credential);
+
+      if (mounted) {
+        Navigator.pop(context, true);
+      }
+    } on FirebaseAuthException catch (e) {
+      setState(() {
+        isLoading = false;
+        errorMessage = e.message ?? "Terjadi kesalahan";
+      });
+    } catch (e) {
+      setState(() {
+        isLoading = false;
+        errorMessage = "Terjadi kesalahan: $e";
+      });
+    }
+  }
+  @override
+  Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
+    return AlertDialog(
+      title: const Text("Tambah Email & Password"),
+      content: Column(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          TextField(
+            controller: emailController,
+            decoration: const InputDecoration(
+              labelText: "Email baru",
+              prefixIcon: Icon(Icons.email_outlined),
+            ),
+            keyboardType: TextInputType.emailAddress,
+            autofillHints: const [AutofillHints.email],
+          ),
+          const SizedBox(height: 12),
+          TextField(
+            controller: passwordController,
+            decoration: const InputDecoration(
+              labelText: "Password baru",
+              prefixIcon: Icon(Icons.lock_outline),
+            ),
+            obscureText: true,
+            autofillHints: const [AutofillHints.newPassword],
+          ),
+          if (errorMessage != null) ...[
+            const SizedBox(height: 12),
+            Text(
+              errorMessage!,
+              style: TextStyle(color: theme.colorScheme.error),
+            ),
+          ],
+        ],
+      ),
+      actions: [
+        TextButton(
+          onPressed: isLoading ? null : () => Navigator.pop(context, false),
+          child: const Text("Batal"),
+        ),
+        FilledButton(
+          onPressed: isLoading ? null : _linkEmailPassword,
+          child: isLoading
+              ? const SizedBox(
+                  width: 18,
+                  height: 18,
+                  child: CircularProgressIndicator(strokeWidth: 2),
+                )
+              : const Text("Tambah"),
+        ),
+      ],
+    );
   }
 }

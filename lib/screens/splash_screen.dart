@@ -2,6 +2,7 @@ import 'dart:async';
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:google_fonts/google_fonts.dart';
 import '../utils/device_helper.dart';
 import '../utils/version_helper.dart';
 
@@ -70,8 +71,29 @@ class _SplashScreenState extends State<SplashScreen> {
     }
 
     final user = FirebaseAuth.instance.currentUser;
+
     if (user != null) {
-      Navigator.pushReplacementNamed(context, '/home');
+      await user.reload();
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+      final isDisabled = userDoc.data()?['disabled'] ?? false;
+
+      if (isDisabled) {
+        await FirebaseAuth.instance.signOut();
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(
+              content: Text('Akun Anda telah dinonaktifkan oleh admin'),
+            ),
+          );
+          Navigator.pushReplacementNamed(context, '/login');
+        }
+      } else {
+        Navigator.pushReplacementNamed(context, '/home');
+      }
     } else {
       Navigator.pushReplacementNamed(context, '/login');
     }
@@ -79,17 +101,13 @@ class _SplashScreenState extends State<SplashScreen> {
 
   @override
   Widget build(BuildContext context) {
-    return const Scaffold(
-      backgroundColor: Colors.indigo,
+    return Scaffold(
+      backgroundColor: Colors.white,
       body: Center(
-        child: Text(
-          'MyNotePlus',
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: Colors.white,
-            letterSpacing: 1.2,
-          ),
+        child: Image.asset(
+          'lib/assets/icon/mynoteplus.png', // pastikan path sesuai file logo kamu
+          width: 250,
+          height: 250,
         ),
       ),
     );
@@ -103,28 +121,36 @@ class MaintenanceScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return Scaffold(
-      backgroundColor: const Color(0xFF212121),
+      backgroundColor: Colors.grey.shade900,
       body: Center(
         child: Card(
           margin: const EdgeInsets.all(24),
-          color: Colors.orange[100],
+          color: Colors.orange.shade100,
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           child: Padding(
-            padding: const EdgeInsets.all(24),
+            padding: const EdgeInsets.all(32),
             child: Column(
               mainAxisSize: MainAxisSize.min,
               children: [
-                const Text(
-                  "\u{1F6E0}️ Maintenance Mode",
-                  style: TextStyle(
-                    fontSize: 20,
+                Icon(Icons.build, size: 72, color: Colors.deepOrange.shade700),
+                const SizedBox(height: 16),
+                Text(
+                  "Maintenance Mode",
+                  style: GoogleFonts.poppins(
+                    fontSize: 24,
                     fontWeight: FontWeight.bold,
-                    color: Colors.deepOrange,
+                    color: Colors.deepOrange.shade700,
                   ),
                 ),
-                const SizedBox(height: 12),
+                const SizedBox(height: 16),
                 Text(
                   message,
-                  style: const TextStyle(fontSize: 16),
+                  style: GoogleFonts.poppins(
+                    fontSize: 16,
+                    color: Colors.black87,
+                  ),
                   textAlign: TextAlign.center,
                 ),
               ],
@@ -133,5 +159,17 @@ class MaintenanceScreen extends StatelessWidget {
         ),
       ),
     );
+  }
+}
+/// Panggil fungsi ini saat user berhasil ajukan hapus akun:
+Future<void> handleAccountDeletionSuccess(BuildContext context) async {
+  await FirebaseAuth.instance.signOut();
+  if (context.mounted) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('Pengajuan hapus akun berhasil. Terima kasih.'),
+      ),
+    );
+    Navigator.pushReplacementNamed(context, '/login');
   }
 }

@@ -28,7 +28,7 @@ Aplikasi catatan pribadi dan film/drama yang modern, ringan, dan praktis. Dibuat
 ---
 
 ## 📦 APK Release
-[📥 Download APK v1.0.3 (Link)](https://github.com/Catkoo/MyNotePlus_Flutter/releases/tag/v1.0.3)
+[📥 Download APK v1.0.4 (Link)](https://github.com/Catkoo/MyNotePlus_Flutter/releases/tag/v1.0.4)
 
 > ⚠️ **Perhatian:**
 > - APK ini dapat berubah setiap kali ada pembaruan fitur atau perbaikan bug.
@@ -42,7 +42,7 @@ Aplikasi catatan pribadi dan film/drama yang modern, ringan, dan praktis. Dibuat
 ## 📥 Cara Clone Project
 ```bash
 git clone https://github.com/Catkoo/MyNotePlus_Flutter.git
-cd mynoteplus
+cd MyNotePlus_Flutter
 flutter pub get
 flutter run
 ```
