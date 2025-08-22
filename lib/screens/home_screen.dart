@@ -7,6 +7,7 @@ import 'package:provider/provider.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+import 'package:flutter/services.dart';
 import '../widgets/home_backup_sync_buttons.dart';
 import '../viewmodel/note_view_model.dart';
 import '../viewmodel/film_note_viewmodel.dart';
@@ -95,6 +96,7 @@ class _HomeScreenState extends State<HomeScreen> {
         updateChangelog = changelog;
       });
     }
+    
   }
 
 void _listenForUnreadNotifications() {
@@ -580,7 +582,10 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
                               );
                             }
                           },
-                          onLongPress: () => _showNoteOptions(context, note),
+                          onLongPress: () {
+                            HapticFeedback.mediumImpact(); // 👉 HP getar pas long press
+                            _showNoteOptions(context, note);
+                          },
                           child: Container(
                             padding: const EdgeInsets.all(12),
                             decoration: BoxDecoration(
@@ -784,8 +789,10 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                               arguments: note.id,
                             );
                           },
-                          onLongPress: () =>
-                              _showFilmNoteOptions(context, note),
+                          onLongPress: () {
+                            HapticFeedback.mediumImpact();
+                            _showFilmNoteOptions(context, note);
+                          },  
                           child: Card(
                             elevation: 2,
                             color: note.isFinished
@@ -913,42 +920,60 @@ class BannerWidget extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final theme = Theme.of(context);
+
     return Positioned(
       top: 60,
       left: 16,
       right: 16,
       child: Material(
         elevation: 6,
-        borderRadius: BorderRadius.circular(12),
+        borderRadius: BorderRadius.circular(16),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: Colors.amber[50],
-            borderRadius: BorderRadius.circular(12),
+            color: theme.colorScheme.surfaceVariant,
+            borderRadius: BorderRadius.circular(16),
+            border: Border(
+              left: BorderSide(color: theme.colorScheme.primary, width: 5),
+            ),
           ),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Text(
-                message,
-                style: const TextStyle(
-                  fontWeight: FontWeight.bold,
-                  fontSize: 16,
-                ),
+              Row(
+                children: [
+                  Icon(
+                    Icons.system_update_alt_rounded,
+                    color: theme.colorScheme.primary,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      message,
+                      style: theme.textTheme.titleMedium?.copyWith(
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                  ),
+                ],
               ),
               const SizedBox(height: 8),
               SizedBox(
-                height: 120, // batas tinggi untuk area changelog
+                height: 120,
                 child: SingleChildScrollView(
-                  child: Text(changelog, style: const TextStyle(fontSize: 14)),
+                  child: Text(
+                    changelog.split("\n").map((e) => "• $e").join("\n"),
+                    style: theme.textTheme.bodyMedium,
+                  ),
                 ),
               ),
-              const SizedBox(height: 8),
+              const SizedBox(height: 12),
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  TextButton(
+                  ElevatedButton.icon(
                     onPressed: () async {
                       final uri = Uri.parse(url);
                       if (await canLaunchUrl(uri)) {
@@ -964,8 +989,10 @@ class BannerWidget extends StatelessWidget {
                         );
                       }
                     },
-                    child: const Text("Update"),
+                    icon: const Icon(Icons.open_in_new, size: 18),
+                    label: const Text("Update"),
                   ),
+                  const SizedBox(width: 8),
                   TextButton(onPressed: onClose, child: const Text("Tutup")),
                 ],
               ),

@@ -3,28 +3,28 @@ import 'package:flutter/material.dart';
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
-  Widget _buildSectionTitle(String title) {
+  Widget _buildSectionTitle(BuildContext context, String title) {
     return Padding(
       padding: const EdgeInsets.only(top: 32, bottom: 12),
       child: Text(
         title,
-        style: const TextStyle(
+        style: TextStyle(
           fontSize: 22,
           fontWeight: FontWeight.w700,
-          color: Colors.deepPurple,
+          color: Theme.of(context).colorScheme.primary,
           letterSpacing: 0.5,
         ),
       ),
     );
   }
 
-  Widget _buildSectionContent(String content) {
+  Widget _buildSectionContent(BuildContext context, String content) {
     return Text(
       content,
-      style: const TextStyle(
+      style: TextStyle(
         fontSize: 16,
         height: 1.7,
-        color: Colors.black87,
+        color: Theme.of(context).textTheme.bodyMedium?.color,
         letterSpacing: 0.3,
       ),
       textAlign: TextAlign.justify,
@@ -33,10 +33,12 @@ class PrivacyPolicyScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
+    final textColor = Theme.of(context).textTheme.bodyMedium?.color;
+
     return Scaffold(
       appBar: AppBar(
         title: const Text('Kebijakan Privasi'),
-        backgroundColor: Colors.deepPurple,
+        backgroundColor: Theme.of(context).colorScheme.primary,
         centerTitle: true,
         elevation: 2,
       ),
@@ -45,51 +47,92 @@ class PrivacyPolicyScreen extends StatelessWidget {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle('Pendahuluan'),
+            _buildSectionTitle(context, 'Pendahuluan'),
             _buildSectionContent(
-              'Kami sangat menghargai kepercayaan Anda dan berkomitmen penuh untuk melindungi privasi serta data pribadi Anda. Kebijakan privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, dan menjaga keamanan informasi Anda saat menggunakan aplikasi kami. Dengan menggunakan layanan kami, Anda menyetujui pengumpulan dan penggunaan informasi sesuai dengan kebijakan ini.',
+              context,
+              'Kami sangat menghargai kepercayaan Anda dalam menggunakan aplikasi ini. '
+              'Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, '
+              'menyimpan, dan melindungi data pribadi yang Anda berikan ketika menggunakan '
+              'layanan kami. Dengan menggunakan aplikasi, Anda dianggap telah membaca, memahami, '
+              'dan menyetujui isi dari Kebijakan Privasi ini.',
             ),
-            _buildSectionTitle('Data yang Dikumpulkan'),
+
+            _buildSectionTitle(context, 'Data yang Dikumpulkan'),
             _buildSectionContent(
-              'Kami mengumpulkan berbagai informasi pribadi yang Anda berikan secara langsung melalui aplikasi, termasuk namun tidak terbatas pada data catatan pribadi, alamat email, dan informasi akun yang diperlukan untuk menyediakan layanan yang optimal. Selain itu, kami dapat mengumpulkan data teknis terkait penggunaan aplikasi untuk meningkatkan pengalaman pengguna.',
+              context,
+              'Untuk mendukung fungsionalitas aplikasi, kami dapat mengumpulkan beberapa jenis data, '
+              'antara lain:\n\n'
+              '- Informasi akun seperti nama, email, atau foto profil (jika tersedia).\n'
+              '- Catatan pribadi, termasuk judul, isi catatan, dan pengingat yang Anda simpan.\n'
+              '- Data film/drama, termasuk judul, tahun rilis, dan status tontonan terakhir.\n'
+              '- Data teknis seperti perangkat, sistem operasi, dan log aktivitas untuk keperluan diagnostik.',
             ),
-            _buildSectionTitle('Tujuan Penggunaan Data'),
+
+            _buildSectionTitle(context, 'Tujuan Penggunaan Data'),
             _buildSectionContent(
+              context,
               'Data yang kami kumpulkan digunakan untuk tujuan berikut:\n\n'
-              '- Menyimpan dan mengelola catatan pribadi Anda secara aman.\n'
-              '- Memproses autentikasi dan otorisasi pengguna.\n'
-              '- Memberikan dukungan dan layanan pelanggan.\n'
-              '- Meningkatkan fitur dan performa aplikasi.\n'
-              '- Mematuhi kewajiban hukum yang berlaku.',
+              '1. Menyediakan dan memelihara layanan utama aplikasi.\n'
+              '2. Menyimpan dan mengelola catatan pribadi serta daftar film/drama Anda.\n'
+              '3. Memproses autentikasi dan otorisasi agar akun Anda aman.\n'
+              '4. Memberikan pengalaman pengguna yang lebih baik dengan rekomendasi atau fitur baru.\n'
+              '5. Melakukan analisis internal untuk meningkatkan performa aplikasi.\n'
+              '6. Mematuhi kewajiban hukum yang berlaku.',
             ),
-            _buildSectionTitle('Keamanan Data'),
+
+            _buildSectionTitle(context, 'Keamanan Data'),
             _buildSectionContent(
-              'Kami menerapkan teknologi keamanan terbaik, termasuk enkripsi data dan protokol keamanan, untuk melindungi informasi pribadi Anda dari akses, perubahan, atau penghapusan yang tidak sah. Meskipun kami berupaya keras menjaga keamanan data, kami juga mengimbau pengguna untuk berhati-hati menjaga kerahasiaan informasi akun mereka.',
+              context,
+              'Kami menerapkan langkah-langkah keamanan yang wajar untuk melindungi data Anda dari akses, '
+              'penggunaan, atau pengungkapan yang tidak sah. Meski demikian, perlu diingat bahwa tidak ada '
+              'metode transmisi data melalui internet atau metode penyimpanan elektronik yang sepenuhnya aman. '
+              'Kami tidak dapat menjamin keamanan absolut, tetapi berkomitmen untuk selalu meningkatkan proteksi.',
             ),
-            _buildSectionTitle('Pengungkapan dan Pembagian Data'),
+
+            _buildSectionTitle(context, 'Pengungkapan dan Pembagian Data'),
             _buildSectionContent(
-              'Kami tidak akan membagikan data pribadi Anda kepada pihak ketiga tanpa persetujuan Anda, kecuali apabila diwajibkan oleh peraturan hukum yang berlaku atau untuk kepentingan keamanan dan penegakan hukum. Data anonim yang tidak dapat diidentifikasi secara pribadi mungkin digunakan untuk analisis dan peningkatan layanan.',
+              context,
+              'Kami tidak akan membagikan atau menjual data pribadi Anda kepada pihak ketiga untuk tujuan komersial. '
+              'Namun, kami dapat mengungkapkan data Anda dalam keadaan berikut:\n\n'
+              '- Jika diwajibkan oleh hukum atau perintah pengadilan.\n'
+              '- Jika diperlukan untuk melindungi hak, keamanan, atau properti kami maupun pengguna lain.\n'
+              '- Dalam hal terjadi penggabungan, akuisisi, atau penjualan aset perusahaan, data dapat menjadi bagian dari transaksi.',
             ),
-            _buildSectionTitle('Hak dan Pilihan Anda'),
+
+            _buildSectionTitle(context, 'Hak dan Pilihan Anda'),
             _buildSectionContent(
-              'Anda memiliki hak untuk mengakses, memperbaiki, atau menghapus data pribadi Anda yang tersimpan di aplikasi kami kapan saja. Untuk melakukan ini, Anda dapat menghubungi layanan bantuan kami melalui aplikasi atau mengubah pengaturan akun Anda sesuai kebijakan yang berlaku.',
+              context,
+              'Anda memiliki hak penuh atas data pribadi Anda, termasuk:\n\n'
+              '- Hak untuk mengakses dan meninjau data yang tersimpan.\n'
+              '- Hak untuk memperbarui atau memperbaiki informasi yang tidak akurat.\n'
+              '- Hak untuk menghapus akun dan seluruh data yang terkait.\n'
+              '- Hak untuk menolak pengumpulan data tertentu (yang tidak wajib) kapan saja.',
             ),
-            _buildSectionTitle('Perubahan pada Kebijakan Privasi'),
+
+            _buildSectionTitle(context, 'Perubahan pada Kebijakan Privasi'),
             _buildSectionContent(
-              'Kami dapat memperbarui kebijakan privasi ini dari waktu ke waktu untuk mencerminkan perubahan dalam praktik kami atau peraturan yang berlaku. Setiap perubahan akan diinformasikan melalui aplikasi atau media komunikasi lainnya sebelum diberlakukan.',
+              context,
+              'Kami dapat memperbarui Kebijakan Privasi ini dari waktu ke waktu. Setiap perubahan akan diberitahukan '
+              'melalui pembaruan di aplikasi atau notifikasi lain yang sesuai. Kami mendorong Anda untuk meninjau '
+              'halaman ini secara berkala agar tetap mengetahui bagaimana kami melindungi data Anda.',
             ),
-            _buildSectionTitle('Kontak Kami'),
+
+            _buildSectionTitle(context, 'Kontak Kami'),
             _buildSectionContent(
-              'Jika Anda memiliki pertanyaan, kekhawatiran, atau permintaan terkait kebijakan privasi ini, silakan hubungi kami melalui fitur bantuan di aplikasi atau email resmi kami. Kami siap membantu dan menanggapi pertanyaan Anda dengan cepat.',
+              context,
+              'Jika Anda memiliki pertanyaan, saran, atau permintaan terkait kebijakan privasi ini, '
+              'silakan hubungi tim kami melalui email resmi yang tersedia di bagian pengaturan aplikasi. '
+              'Kami berkomitmen untuk merespons setiap permintaan dengan segera.',
             ),
+
             const SizedBox(height: 48),
             Center(
               child: Text(
-                'Terima kasih telah mempercayakan data Anda kepada kami dan menggunakan aplikasi ini dengan penuh tanggung jawab.',
+                'Terima kasih telah mempercayakan catatan dan data tontonan Anda kepada kami 🙏',
                 style: TextStyle(
                   fontSize: 14,
                   fontStyle: FontStyle.italic,
-                  color: Colors.grey[700],
+                  color: textColor?.withOpacity(0.7),
                   letterSpacing: 0.3,
                 ),
                 textAlign: TextAlign.center,

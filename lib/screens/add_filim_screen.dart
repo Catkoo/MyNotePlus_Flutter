@@ -46,16 +46,14 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
 
     if (pickedTime == null) return;
 
-    final combined = DateTime(
-      pickedDate.year,
-      pickedDate.month,
-      pickedDate.day,
-      pickedTime.hour,
-      pickedTime.minute,
-    );
-
     setState(() {
-      _nextEpisodeDateTime = combined;
+      _nextEpisodeDateTime = DateTime(
+        pickedDate.year,
+        pickedDate.month,
+        pickedDate.day,
+        pickedTime.hour,
+        pickedTime.minute,
+      );
     });
   }
 
@@ -72,6 +70,8 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
       );
       return;
     }
+
+    setState(() => isSaving = true);
 
     final currentUser = FirebaseAuth.instance.currentUser;
     final note = FilmNote(
@@ -100,7 +100,63 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
       );
     }
 
-    Navigator.pop(context);
+    setState(() => isSaving = false);
+
+    if (mounted) {
+      Navigator.pop(context, true);
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Row(
+            children: [
+              Icon(Icons.check_circle, color: Colors.green),
+              SizedBox(width: 8),
+              Text("Catatan berhasil disimpan"),
+            ],
+          ),
+        ),
+      );
+    }
+  }
+
+  Future<bool> _onWillPop() async {
+    final isEmpty =
+        _titleController.text.trim().isEmpty &&
+        _yearController.text.trim().isEmpty &&
+        _mediaController.text.trim().isEmpty &&
+        _episodeController.text.trim().isEmpty &&
+        _totalEpisodeController.text.trim().isEmpty;
+
+    if (isEmpty) return true;
+
+    final shouldExit = await showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+        title: const Text("Keluar tanpa menyimpan?"),
+        content: const Text(
+          "Anda memiliki catatan yang belum disimpan. Yakin ingin keluar?",
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.of(context).pop(false),
+            child: const Text("Batal"),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: Colors.red,
+              foregroundColor: Colors.white,
+              shape: RoundedRectangleBorder(
+                borderRadius: BorderRadius.circular(12),
+              ),
+            ),
+            onPressed: () => Navigator.of(context).pop(true),
+            child: const Text("Keluar"),
+          ),
+        ],
+      ),
+    );
+
+    return shouldExit ?? false;
   }
 
   @override
@@ -110,103 +166,142 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
         ? DateFormat('dd MMM yyyy, HH:mm').format(_nextEpisodeDateTime!)
         : null;
 
-    return Scaffold(
-      appBar: AppBar(title: const Text('Tambah Film/Drama')),
-      body: SingleChildScrollView(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          children: [
-            Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(16),
-              ),
-              elevation: 4,
-              child: Padding(
-                padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return WillPopScope(
+      onWillPop: _onWillPop,
+      child: Scaffold(
+        appBar: AppBar(
+          title: const Text('Tambah Catatan Film/Drama'),
+          backgroundColor: theme.colorScheme.primary,
+          foregroundColor: Colors.white,
+          elevation: 0,
+          shape: const RoundedRectangleBorder(
+            borderRadius: BorderRadius.vertical(bottom: Radius.circular(20)),
+          ),
+          leading: IconButton(
+            icon: const Icon(Icons.arrow_back),
+            onPressed: () async {
+              final canExit = await _onWillPop();
+              if (canExit && mounted) Navigator.pop(context);
+            },
+          ),
+        ),
+        body: SingleChildScrollView(
+          padding: const EdgeInsets.all(16),
+          child: Column(
+            children: [
+              _buildSectionCard(
+                "🎬 Info Utama",
+                Column(
                   children: [
-                    TextField(
+                    _buildTextField(
                       controller: _titleController,
-                      decoration: const InputDecoration(
-                        labelText: 'Judul Film/Drama',
-                      ),
+                      label: "Judul Film/Drama",
+                      icon: Icons.movie,
                     ),
                     const SizedBox(height: 12),
-                    TextField(
-                      controller: _yearController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(labelText: 'Tahun'),
+                    Row(
+                      children: [
+                        Expanded(
+                          child: _buildTextField(
+                            controller: _yearController,
+                            label: "Tahun",
+                            icon: Icons.calendar_today,
+                            keyboardType: TextInputType.number,
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Expanded(
+                          child: _buildTextField(
+                            controller: _mediaController,
+                            label: "Media (opsional)",
+                            icon: Icons.tv,
+                          ),
+                        ),
+                      ],
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _mediaController,
-                      decoration: const InputDecoration(
-                        labelText: 'Media (opsional)',
-                      ),
-                    ),
-                    const SizedBox(height: 12),
-                    TextField(
+                  ],
+                ),
+              ),
+
+              _buildSectionCard(
+                "📺 Progres",
+                Column(
+                  children: [
+                    _buildTextField(
                       controller: _episodeController,
+                      label: "Episode terakhir ditonton",
+                      icon: Icons.play_arrow,
                       keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Episode terakhir ditonton',
-                      ),
                     ),
                     const SizedBox(height: 12),
-                    DropdownButtonFormField<String>(
-                      value: selectedStatus,
-                      items: statusOptions.map((status) {
-                        return DropdownMenuItem(
-                          value: status,
-                          child: Text(status),
+                    _buildTextField(
+                      controller: _totalEpisodeController,
+                      label: "Total Episode (opsional)",
+                      icon: Icons.format_list_numbered,
+                      keyboardType: TextInputType.number,
+                    ),
+                    const SizedBox(height: 12),
+                    Wrap(
+                      spacing: 8,
+                      children: statusOptions.map((status) {
+                        final selected = status == selectedStatus;
+                        return ChoiceChip(
+                          label: Text(status),
+                          selected: selected,
+                          labelStyle: TextStyle(
+                            color: selected
+                                ? theme.colorScheme.onPrimary
+                                : theme.colorScheme.onSurface,
+                          ),
+                          selectedColor: theme.colorScheme.primary,
+                          backgroundColor: theme.colorScheme.surfaceVariant,
+                          onSelected: (_) {
+                            setState(() => selectedStatus = status);
+                          },
                         );
                       }).toList(),
-                      onChanged: (value) {
-                        setState(() => selectedStatus = value!);
-                      },
-                      decoration: const InputDecoration(labelText: 'Status'),
                     ),
-                    const SizedBox(height: 12),
-                    TextField(
-                      controller: _totalEpisodeController,
-                      keyboardType: TextInputType.number,
-                      decoration: const InputDecoration(
-                        labelText: 'Total Episode (opsional)',
-                      ),
+                  ],
+                ),
+              ),
+
+              _buildSectionCard(
+                "⏰ Reminder",
+                ListTile(
+                  leading: const Icon(Icons.schedule),
+                  title: Text(
+                    dateTimeFormatted ?? 'Jadwal episode berikutnya (opsional)',
+                    style: TextStyle(
+                      color: dateTimeFormatted != null
+                          ? theme.colorScheme.onSurface
+                          : Colors.grey,
                     ),
-                    const SizedBox(height: 20),
-                    ListTile(
-                      contentPadding: EdgeInsets.zero,
-                      leading: const Icon(Icons.schedule),
-                      title: Text(
-                        dateTimeFormatted ??
-                            'Jadwal episode berikutnya (opsional)',
-                        style: TextStyle(
-                          color: dateTimeFormatted != null
-                              ? theme.colorScheme.onSurface
-                              : Colors.grey,
-                        ),
-                      ),
-                      trailing: TextButton(
-                        onPressed: _pickDateTime,
-                        child: const Text('Pilih'),
-                      ),
-                    ),
-                    if (selectedStatus == 'Selesai') ...[
-                      const SizedBox(height: 24),
-                      Text('Rating Kamu', style: theme.textTheme.titleMedium),
+                  ),
+                  trailing: ElevatedButton.icon(
+                    onPressed: _pickDateTime,
+                    icon: const Icon(Icons.edit_calendar),
+                    label: const Text('Pilih'),
+                  ),
+                ),
+              ),
+
+              if (selectedStatus == 'Selesai')
+                _buildSectionCard(
+                  "⭐ Review",
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text("Rating Kamu: ${_rating.toStringAsFixed(1)} / 5"),
                       Slider(
                         value: _rating,
+                        min: 0,
+                        max: 5,
+                        divisions: 10,
+                        label: _rating.toStringAsFixed(1),
                         onChanged: (value) {
                           setState(() => _rating = value);
                         },
-                        min: 0.0,
-                        max: 5.0,
-                        divisions: 10,
-                        label: _rating.toStringAsFixed(1),
                       ),
-                      const SizedBox(height: 12),
                       SwitchListTile(
                         title: const Text('Wajib Ditonton Ulang?'),
                         value: _mustRewatch,
@@ -215,19 +310,72 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                         },
                       ),
                     ],
-                    const SizedBox(height: 24),
-                    SizedBox(
-                      width: double.infinity,
-                      child: FilledButton.icon(
-                        onPressed: isSaving ? null : _saveFilmNote,
-                        icon: const Icon(Icons.check),
-                        label: const Text('Simpan Catatan'),
-                      ),
-                    ),
-                  ],
+                  ),
+                ),
+
+              const SizedBox(height: 24),
+              SizedBox(
+                width: double.infinity,
+                child: FilledButton.icon(
+                  onPressed: isSaving ? null : _saveFilmNote,
+                  icon: isSaving
+                      ? const SizedBox(
+                          width: 18,
+                          height: 18,
+                          child: CircularProgressIndicator(
+                            strokeWidth: 2,
+                            color: Colors.white,
+                          ),
+                        )
+                      : const Icon(Icons.check),
+                  label: Text(
+                    isSaving ? "Menyimpan..." : "Simpan Catatan",
+                    style: const TextStyle(fontSize: 16),
+                  ),
                 ),
               ),
+            ],
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTextField({
+    required TextEditingController controller,
+    required String label,
+    required IconData icon,
+    TextInputType? keyboardType,
+  }) {
+    return TextField(
+      controller: controller,
+      keyboardType: keyboardType,
+      decoration: InputDecoration(
+        labelText: label,
+        border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+        prefixIcon: Icon(icon),
+      ),
+    );
+  }
+
+  Widget _buildSectionCard(String title, Widget child) {
+    return Card(
+      margin: const EdgeInsets.symmetric(vertical: 10),
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      elevation: 2,
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              title,
+              style: Theme.of(
+                context,
+              ).textTheme.titleMedium?.copyWith(fontWeight: FontWeight.bold),
             ),
+            const Divider(),
+            child,
           ],
         ),
       ),

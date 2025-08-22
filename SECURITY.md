@@ -10,8 +10,8 @@ Kami hanya menerima laporan keamanan untuk versi terbaru yang dirilis secara pub
 
 | Versi     | Status Dukungan |
 |-----------|-----------------|
-| 1.0.4     | ✅ Aktif        |
-| < 1.0.4   | ❌ Tidak Didukung |
+| 1.0.5     | ✅ Aktif        |
+| < 1.0.5   | ❌ Tidak Didukung |
 
 ---
 

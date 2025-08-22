@@ -11,7 +11,7 @@ import '../viewmodel/note_view_model.dart';
 import '../viewmodel/film_note_viewmodel.dart';
 import '../widgets/theme_provider.dart';
 import '../screens/privacy_policy_screen.dart';
-
+import '../screens/terms_of_use.dart';
 
 class ProfileScreen extends StatefulWidget {
   const ProfileScreen({super.key});
@@ -115,7 +115,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
     }
   }
 
-void _openDeleteAccountForm() async {
+  void _openDeleteAccountForm() async {
     const url =
         'https://forms.gle/5LHBo9szD2hCfsa48'; // Ganti dengan link form kamu
     final uri = Uri.parse(url);
@@ -309,18 +309,6 @@ void _openDeleteAccountForm() async {
                       ),
                     const SizedBox(height: 8),
                     FilledButton.icon(
-                      icon: const Icon(Icons.email_outlined),
-                      onPressed: _showChangeEmailDialog,
-                      label: const Text("Ubah Email"),
-                      style: FilledButton.styleFrom(
-                        minimumSize: const Size.fromHeight(50),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                      ),
-                    ),
-                    const SizedBox(height: 8),
-                    FilledButton.icon(
                       icon: const Icon(Icons.lock_outline),
                       onPressed: _showChangePasswordDialog,
                       label: const Text("Ubah Password"),
@@ -352,7 +340,10 @@ void _openDeleteAccountForm() async {
                   ],
                   const SizedBox(height: 16),
                   FilledButton.icon(
-                    icon: const Icon(Icons.privacy_tip_outlined, color: Colors.white),
+                    icon: const Icon(
+                      Icons.privacy_tip_outlined,
+                      color: Colors.white,
+                    ),
                     label: const Text(
                       'Kebijakan Privasi',
                       style: TextStyle(fontWeight: FontWeight.bold),
@@ -367,7 +358,35 @@ void _openDeleteAccountForm() async {
                     onPressed: () {
                       Navigator.push(
                         context,
-                        MaterialPageRoute(builder: (context) => const PrivacyPolicyScreen()),
+                        MaterialPageRoute(
+                          builder: (context) => const PrivacyPolicyScreen(),
+                        ),
+                      );
+                    },
+                  ),
+                  const SizedBox(height: 12),
+                  FilledButton.icon(
+                    icon: const Icon(
+                      Icons.article_outlined,
+                      color: Colors.white,
+                    ),
+                    label: const Text(
+                      'Syarat & Ketentuan',
+                      style: TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                    style: FilledButton.styleFrom(
+                      backgroundColor: Colors.indigo,
+                      minimumSize: const Size.fromHeight(50),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
+                    ),
+                    onPressed: () {
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (context) => const TermsOfUseScreen(),
+                        ),
                       );
                     },
                   ),
@@ -429,7 +448,7 @@ void _openDeleteAccountForm() async {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Versi 1.0.4',
+                    'Versi 1.0.5',
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.grey,
@@ -438,12 +457,6 @@ void _openDeleteAccountForm() async {
                 ],
               ),
             ),
-    );
-  }
-
-  void _showChangeEmailDialog() {
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(content: Text("Fitur ini akan segera hadir")),
     );
   }
 
@@ -533,6 +546,7 @@ class _AddEmailPasswordDialogState extends State<AddEmailPasswordDialog> {
       });
     }
   }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
