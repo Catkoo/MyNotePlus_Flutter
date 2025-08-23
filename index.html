@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="id">
+
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="icon/mynoteplus.png" />
+    <title>MyNotePlus Blog</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        body {
+            margin: 0;
+            font-family: 'Poppins', sans-serif;
+            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            color: #fff;
+        }
+
+        header {
+            padding: 1rem 2rem;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(8px);
+            position: sticky;
+            top: 0;
+            z-index: 1000;
+        }
+
+        header h1 {
+            font-weight: 800;
+            color: #ffdd57;
+        }
+
+        nav a {
+            margin-left: 1rem;
+            color: #fff;
+            text-decoration: none;
+            font-weight: 600;
+        }
+
+        nav a:hover {
+            color: #ffdd57;
+        }
+
+        .hero {
+            text-align: center;
+            padding: 4rem 2rem;
+        }
+
+        .hero h2 {
+            font-size: 2.5rem;
+            font-weight: 800;
+        }
+
+        .btn {
+            display: inline-block;
+            margin-top: 2rem;
+            padding: 0.8rem 1.6rem;
+            background: #ffdd57;
+            color: #000;
+            font-weight: 700;
+            border-radius: 999px;
+            text-decoration: none;
+        }
+
+        .maintenance {
+            background: #ff4757;
+            padding: 1rem;
+            text-align: center;
+            font-weight: 600;
+            animation: blink 1.5s infinite;
+        }
+
+        @keyframes blink {
+            50% {
+                opacity: 0.6;
+            }
+        }
+
+        section {
+            max-width: 900px;
+            margin: auto;
+            padding: 3rem 2rem;
+        }
+
+        h3 {
+            color: #ffdd57;
+            margin-bottom: 1rem;
+        }
+
+        .update-item {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        details {
+            background: rgba(255, 255, 255, 0.05);
+            padding: 1rem;
+            border-radius: 10px;
+            margin-bottom: 1rem;
+        }
+
+        summary {
+            cursor: pointer;
+            font-weight: 700;
+        }
+
+        footer {
+            text-align: center;
+            padding: 2rem;
+            font-size: 0.9rem;
+            opacity: 0.7;
+        }
+    </style>
+</head>
+
+<body>
+    <header>
+        <h1>MyNotePlus</h1>
+        <nav>
+            <a href="#updates">Update</a>
+            <a href="#contact">Hubungi Kami</a>
+        </nav>
+    </header>
+
+    <!-- 🚧 Banner Maintenance (hapus/comment kalau tidak dipakai)
+    <div class="maintenance">
+        🚧 Sedang Maintenance! Beberapa fitur mungkin tidak tersedia 🚧
+    </div> -->
+
+    <section class="hero">
+        <h2>✨ Blog & Update MyNotePlus</h2>
+        <p>Aplikasi catatan pribadi & film/drama yang modern, ringan, dan praktis. Dibuat dengan Flutter & Firebase.</p>
+        <a class="btn" href="https://github.com/Catkoo/MyNotePlus_Flutter/releases/tag/v1.0.5" target="_blank">📥 Download APK
+            v1.0.5</a>
+    </section>
+
+    <section id="updates">
+        <h3>🔥 Yang Baru</h3>
+
+        <!-- 🆕 Versi Terbaru -->
+        <div class="update-item">
+            <h4>✨ V1.0.5</h4>
+            <p><strong>⚠️ Peringatan Penting</strong><br>
+                Versi ini membawa perubahan besar pada database internal.<br>
+                👉 Harap hapus/uninstall versi lama sebelum update ke V1.0.5.</p>
+
+            <p><strong>🚀 Peningkatan Performa & Stabilitas</strong><br>
+                - Aplikasi kini lebih ringan dan cepat<br>
+                - Optimalisasi sinkronisasi data</p>
+
+            <p><strong>🎨 Penyempurnaan UI/UX</strong><br>
+                - List catatan lebih bersih & responsif<br>
+                - Dark mode lebih seimbang<br>
+                - Navigasi Profil & Home lebih intuitif<br>
+                - Tampilan Add/Edit Note & Film lebih modern<br>
+                - Detail Film lebih jelas & nyaman</p>
+
+            <p><strong>🔐 Keamanan Lebih Baik</strong><br>
+                - Validasi login diperkuat<br>
+                - Sistem enkripsi baru</p>
+
+            <p><strong>🆕 Fitur Baru</strong><br>
+                - Getar saat long press<br>
+                - Edit catatan dengan klik langsung<br>
+                - Tombol Backup Cepat di profil</p>
+
+            <p><strong>🧹 Perbaikan Bug</strong><br>
+                - Judul catatan hilang saat edit → fix<br>
+                - Tampilan teks di card film/drama diperbaiki<br>
+                - Glitch saat pindah halaman diatasi</p>
+
+            <p><strong>📢 Tips</strong>: lakukan backup secara berkala<br>
+                <strong>📲 Rekomendasi</strong>: segera update ke v1.0.5 🚀
+            </p>
+        </div>
+
+        <!-- Versi lama collapsible -->
+        <details>
+            <summary>✨ Riwayat Update Sebelumnya</summary>
+            <div class="update-item">
+                <h4>V1.0.4</h4>
+                <p>🛠️ Penyempurnaan backup & restore, 🔐 keamanan data, 🖥️ UI modern, 🗑️ hapus akun, 📤 berbagi
+                    catatan, 🧹 bugfix.</p>
+            </div>
+            <div class="update-item">
+                <h4>V1.0.3</h4>
+                <p>🛠️ Backup & Restore ke Google Drive, 📂 JSON universal, 🔁 restore otomatis, 🐞 bugfix.</p>
+            </div>
+            <div class="update-item">
+                <h4>V1.0.2</h4>
+                <p>🔔 Notifikasi in-app, 🎬 peningkatan FilmNote, 📌 pin cerdas, 🌗 mode gelap, 🐞 bugfix.</p>
+            </div>
+            <div class="update-item">
+                <h4>V1.0.1 & V1.0.0</h4>
+                <p>🚀 Versi Flutter pertama, desain ulang profil, banner update via Firebase, optimisasi UI/UX.</p>
+            </div>
+        </details>
+    </section>
+
+    <section id="contact" style="text-align:center;">
+        <h3>📩 Hubungi Kami</h3>
+        <p>Kami ingin mendengar masukanmu!<br>Silakan kirim pesan lewat Google Form berikut:</p>
+        <a class="btn" href="https://forms.gle/WT2k6S9S6mXeo3c3A" target="_blank">✍️ Isi Form</a>
+    </section>
+
+    <footer>
+        © 2025 MyNotePlus. Dibuat dengan ❤️ untuk generasi kreatif.
+    </footer>
+</body>
+
+</html>
