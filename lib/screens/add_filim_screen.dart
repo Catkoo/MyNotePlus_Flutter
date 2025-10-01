@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
-import '../services/notification_helper.dart';
 import 'package:uuid/uuid.dart';
 import 'package:intl/intl.dart';
 import '../models/film_note.dart';
@@ -20,42 +19,12 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
   final _episodeController = TextEditingController(text: '1');
   final _totalEpisodeController = TextEditingController();
 
-  DateTime? _nextEpisodeDateTime;
   final statusOptions = ['Belum selesai', 'Selesai'];
   String selectedStatus = 'Belum selesai';
 
   double _rating = 0.0;
   bool _mustRewatch = false;
   bool isSaving = false;
-
-  Future<void> _pickDateTime() async {
-    final now = DateTime.now();
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: now,
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
-    );
-
-    if (pickedDate == null) return;
-
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: const TimeOfDay(hour: 20, minute: 0),
-    );
-
-    if (pickedTime == null) return;
-
-    setState(() {
-      _nextEpisodeDateTime = DateTime(
-        pickedDate.year,
-        pickedDate.month,
-        pickedDate.day,
-        pickedTime.hour,
-        pickedTime.minute,
-      );
-    });
-  }
 
   void _saveFilmNote() async {
     final title = _titleController.text.trim();
@@ -83,22 +52,12 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
       isFinished: selectedStatus == 'Selesai',
       ownerUid: currentUser?.uid ?? '',
       lastEdited: DateTime.now(),
-      nextEpisodeDate: _nextEpisodeDateTime,
       totalEpisodes: totalEpisode,
       overallRating: selectedStatus == 'Selesai' ? _rating : null,
       mustRewatch: selectedStatus == 'Selesai' ? _mustRewatch : null,
     );
 
     await FilmNoteViewModel().addFilmNote(note);
-
-    if (_nextEpisodeDateTime != null) {
-      await scheduleNotification(
-        id: note.id.hashCode,
-        title: 'Episode Baru: ${note.title}',
-        body: 'Jangan lupa nonton episode berikutnya hari ini!',
-        scheduledDate: _nextEpisodeDateTime!,
-      );
-    }
 
     setState(() => isSaving = false);
 
@@ -162,9 +121,6 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final dateTimeFormatted = _nextEpisodeDateTime != null
-        ? DateFormat('dd MMM yyyy, HH:mm').format(_nextEpisodeDateTime!)
-        : null;
 
     return WillPopScope(
       onWillPop: _onWillPop,
@@ -262,26 +218,6 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                       }).toList(),
                     ),
                   ],
-                ),
-              ),
-
-              _buildSectionCard(
-                "⏰ Reminder",
-                ListTile(
-                  leading: const Icon(Icons.schedule),
-                  title: Text(
-                    dateTimeFormatted ?? 'Jadwal episode berikutnya (opsional)',
-                    style: TextStyle(
-                      color: dateTimeFormatted != null
-                          ? theme.colorScheme.onSurface
-                          : Colors.grey,
-                    ),
-                  ),
-                  trailing: ElevatedButton.icon(
-                    onPressed: _pickDateTime,
-                    icon: const Icon(Icons.edit_calendar),
-                    label: const Text('Pilih'),
-                  ),
                 ),
               ),
 

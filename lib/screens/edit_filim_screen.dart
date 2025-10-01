@@ -20,7 +20,6 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
   final _episodeController = TextEditingController();
   final _totalEpisodeController = TextEditingController();
 
-  DateTime? _nextEpisodeDateTime;
   final statusOptions = ['Belum selesai', 'Selesai'];
   String selectedStatus = 'Belum selesai';
 
@@ -52,39 +51,11 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
         selectedStatus = note.isFinished ? 'Selesai' : 'Belum selesai';
         _rating = note.overallRating ?? 0.0;
         _mustRewatch = note.mustRewatch ?? false;
-        _nextEpisodeDateTime = note.nextEpisodeDate;
         isLoading = false;
       });
     } else {
       Navigator.pop(context); // jika id tidak ditemukan
     }
-  }
-
-  Future<void> _pickDateTime() async {
-    final now = DateTime.now();
-    final pickedDate = await showDatePicker(
-      context: context,
-      initialDate: _nextEpisodeDateTime ?? now,
-      firstDate: now,
-      lastDate: now.add(const Duration(days: 365)),
-    );
-    if (pickedDate == null) return;
-
-    final pickedTime = await showTimePicker(
-      context: context,
-      initialTime: const TimeOfDay(hour: 20, minute: 0),
-    );
-    if (pickedTime == null) return;
-
-    setState(() {
-      _nextEpisodeDateTime = DateTime(
-        pickedDate.year,
-        pickedDate.month,
-        pickedDate.day,
-        pickedTime.hour,
-        pickedTime.minute,
-      );
-    });
   }
 
   void _updateFilmNote() async {
@@ -94,7 +65,7 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
     final episode = int.tryParse(_episodeController.text.trim()) ?? 0;
     final totalEpisode = int.tryParse(_totalEpisodeController.text.trim());
 
-    // Validasi ketat: judul wajib ada, tahun wajib, episode > 0
+    // Validasi
     if (title.isEmpty) {
       ScaffoldMessenger.of(
         context,
@@ -120,23 +91,12 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
       isFinished: selectedStatus == 'Selesai',
       ownerUid: currentUser?.uid ?? '',
       lastEdited: DateTime.now(),
-      nextEpisodeDate: _nextEpisodeDateTime,
       totalEpisodes: totalEpisode,
       overallRating: selectedStatus == 'Selesai' ? _rating : null,
       mustRewatch: selectedStatus == 'Selesai' ? _mustRewatch : null,
     );
 
     await FilmNoteViewModel().updateFilmNote(updatedNote);
-
-    // Update notifikasi
-    if (_nextEpisodeDateTime != null) {
-      await scheduleNotification(
-        id: updatedNote.id.hashCode,
-        title: 'Episode Baru: ${updatedNote.title}',
-        body: 'Jangan lupa nonton episode berikutnya hari ini!',
-        scheduledDate: _nextEpisodeDateTime!,
-      );
-    }
 
     setState(() => isSaving = false);
 
@@ -166,7 +126,6 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
             (_currentNote!.totalEpisodes?.toString() ?? '') ||
         selectedStatus !=
             (_currentNote!.isFinished ? 'Selesai' : 'Belum selesai') ||
-        _nextEpisodeDateTime != _currentNote!.nextEpisodeDate ||
         _rating != (_currentNote!.overallRating ?? 0.0) ||
         _mustRewatch != (_currentNote!.mustRewatch ?? false);
   }
@@ -208,10 +167,6 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
-    final dateTimeFormatted = _nextEpisodeDateTime != null
-        ? DateFormat('dd MMM yyyy, HH:mm').format(_nextEpisodeDateTime!)
-        : null;
 
     return WillPopScope(
       onWillPop: _onWillPop,
@@ -238,6 +193,7 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
                 padding: const EdgeInsets.all(16),
                 child: Column(
                   children: [
+                    // Info utama
                     _buildSectionCard(
                       "🎬 Info Utama",
                       Column(
@@ -272,6 +228,7 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
                       ),
                     ),
 
+                    // Progres
                     _buildSectionCard(
                       "📺 Progres",
                       Column(
@@ -308,7 +265,11 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
                                 backgroundColor: theme
                                     .colorScheme
                                     .surfaceVariant
-                                    .withOpacity(isDark ? 0.25 : 0.6),
+                                    .withOpacity(
+                                      theme.brightness == Brightness.dark
+                                          ? 0.25
+                                          : 0.6,
+                                    ),
                                 onSelected: (_) {
                                   setState(() => selectedStatus = status);
                                 },
@@ -319,29 +280,7 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
                       ),
                     ),
 
-                    _buildSectionCard(
-                      "⏰ Reminder",
-                      ListTile(
-                        contentPadding: EdgeInsets.zero,
-                        leading: const Icon(Icons.alarm_outlined),
-                        title: Text(
-                          dateTimeFormatted ??
-                              'Jadwal episode berikutnya (opsional)',
-                          style: TextStyle(
-                            fontSize: 14,
-                            color: dateTimeFormatted != null
-                                ? theme.colorScheme.onSurface
-                                : theme.hintColor,
-                          ),
-                        ),
-                        trailing: OutlinedButton.icon(
-                          onPressed: _pickDateTime,
-                          icon: const Icon(Icons.edit_calendar_outlined),
-                          label: const Text('Atur'),
-                        ),
-                      ),
-                    ),
-
+                    // Review kalau selesai
                     if (selectedStatus == 'Selesai')
                       _buildSectionCard(
                         "⭐ Review",
@@ -413,15 +352,12 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
   }) {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
-
-    // Label muncul hanya jika ada isi; kalau kosong, pakai hint
     final showLabel = controller.text.isNotEmpty;
 
     return TextField(
       controller: controller,
       keyboardType: keyboardType,
-      onChanged: (_) =>
-          setState(() {}), // trigger rebuild agar label/hint adaptif
+      onChanged: (_) => setState(() {}),
       decoration: InputDecoration(
         labelText: showLabel ? label : null,
         hintText: showLabel ? null : "Masukkan $label",

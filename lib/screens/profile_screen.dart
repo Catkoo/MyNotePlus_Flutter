@@ -448,7 +448,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   ),
                   const SizedBox(height: 24),
                   Text(
-                    'Versi 1.0.5',
+                    'Versi 1.0.6',
                     style: theme.textTheme.bodySmall?.copyWith(
                       fontWeight: FontWeight.bold,
                       color: Colors.grey,

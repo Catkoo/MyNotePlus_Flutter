@@ -11,13 +11,12 @@ import 'package:flutter/services.dart';
 import '../widgets/home_backup_sync_buttons.dart';
 import '../viewmodel/note_view_model.dart';
 import '../viewmodel/film_note_viewmodel.dart';
-import '../models/note_model.dart'; 
-import '../models/film_note.dart'; 
+import '../models/note_model.dart';
+import '../models/film_note.dart';
 import 'profile_screen.dart';
 import '../screens/profile_screen_with_backup.dart';
 import '../services/backup_service.dart';
 import '../services/google_drive_service.dart';
-
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -45,16 +44,16 @@ class _HomeScreenState extends State<HomeScreen> {
   void initState() {
     super.initState();
     _initFCM();
-     _listenForUnreadNotifications();
+    _listenForUnreadNotifications();
 
-  WidgetsBinding.instance.addPostFrameCallback((_) {
+    WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Clear all previous data before listening
+        // Clear data lama
         Provider.of<NoteViewModel>(context, listen: false).clear();
         Provider.of<FilmNoteViewModel>(context, listen: false).clear();
 
-        // Start new listener
+        // Start listener baru
         Provider.of<NoteViewModel>(context, listen: false).startNoteListener();
         Provider.of<FilmNoteViewModel>(
           context,
@@ -96,10 +95,9 @@ class _HomeScreenState extends State<HomeScreen> {
         updateChangelog = changelog;
       });
     }
-    
   }
 
-void _listenForUnreadNotifications() {
+  void _listenForUnreadNotifications() {
     final uid = FirebaseAuth.instance.currentUser?.uid;
     if (uid == null) return;
 
@@ -111,26 +109,22 @@ void _listenForUnreadNotifications() {
         .snapshots()
         .listen((snapshot) {
           final hasData = snapshot.docs.isNotEmpty;
-          print('🔍 hasUnread: $hasData'); // Tambah ini buat debug
+          debugPrint('🔍 hasUnread: $hasData');
           setState(() {
             hasUnread = hasData;
           });
         });
   }
 
-  
   void _initFCM() async {
-    // ✅ Minta izin notifikasi (Android 13+)
     NotificationSettings settings = await _messaging.requestPermission();
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       debugPrint('✅ Notifikasi diizinkan');
 
-      // ✅ Dapatkan token device (jika perlu)
       final token = await _messaging.getToken();
       debugPrint('📱 Token FCM: $token');
 
-      // ✅ Listener saat pesan diterima saat foreground
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         final notification = message.notification;
         if (notification != null) {
@@ -143,7 +137,7 @@ void _listenForUnreadNotifications() {
     }
   }
 
-void _showLocalNotification(String? title, String? body) {
+  void _showLocalNotification(String? title, String? body) {
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
           'default_channel',
@@ -165,7 +159,6 @@ void _showLocalNotification(String? title, String? body) {
     );
   }
 
-
   @override
   Widget build(BuildContext context) {
     if (isMaintenance) {
@@ -175,37 +168,50 @@ void _showLocalNotification(String? title, String? body) {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
-       appBar: AppBar(
-          title: const Text("MyNotePlus"),
+        appBar: AppBar(
+          elevation: 2,
+          backgroundColor: Theme.of(context).colorScheme.surface,
+          title: const Text(
+            "MyNotePlus",
+            style: TextStyle(fontWeight: FontWeight.bold),
+          ),
           actions: [
             IconButton(
+              tooltip: "Notifikasi",
               onPressed: () async {
                 await Navigator.pushNamed(context, '/notification');
               },
               icon: Stack(
                 children: [
-                  const Icon(Icons.notifications),
+                  const Icon(Icons.notifications_outlined),
                   if (hasUnread)
                     Positioned(
                       right: 0,
                       top: 0,
-                      child: CircleAvatar(
-                        radius: 6,
-                        backgroundColor: Colors.red,
-                        child: Text(
-                          '1',
-                          style: TextStyle(fontSize: 10, color: Colors.white),
+                      child: Container(
+                        padding: const EdgeInsets.all(2),
+                        decoration: const BoxDecoration(
+                          color: Colors.red,
+                          shape: BoxShape.circle,
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 14,
+                          minHeight: 14,
+                        ),
+                        child: const Text(
+                          '!',
+                          style: TextStyle(color: Colors.white, fontSize: 10),
+                          textAlign: TextAlign.center,
                         ),
                       ),
                     ),
                 ],
               ),
-
             ),
             IconButton(
               icon: const Icon(Icons.cloud_upload_outlined),
               tooltip: "Backup ke Google Drive",
-                onPressed: () async {
+              onPressed: () async {
                 try {
                   final file = await BackupService().exportDataToJson();
                   await GoogleDriveService().uploadJsonBackup(
@@ -226,46 +232,49 @@ void _showLocalNotification(String? title, String? body) {
                 }
               },
             ),
-            // 📥 Restore
-          IconButton(
-                icon: const Icon(Icons.cloud_download_outlined),
-                tooltip: "Restore dari Google Drive",
-                onPressed: () async {
-                  final confirmed = await showDialog<bool>(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      title: const Text("Konfirmasi Restore"),
-                      content: const Text("Data saat ini akan ditimpa. Lanjutkan?"),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context, false),
-                          child: const Text("Batal"),
-                        ),
-                        ElevatedButton(
-                          onPressed: () => Navigator.pop(context, true),
-                          child: const Text("Restore"),
-                        ),
-                      ],
+            IconButton(
+              icon: const Icon(Icons.cloud_download_outlined),
+              tooltip: "Restore dari Google Drive",
+              onPressed: () async {
+                final confirmed = await showDialog<bool>(
+                  context: context,
+                  builder: (_) => AlertDialog(
+                    title: const Text("Konfirmasi Restore"),
+                    content: const Text(
+                      "Data saat ini akan ditimpa. Lanjutkan?",
                     ),
-                  );
+                    actions: [
+                      TextButton(
+                        onPressed: () => Navigator.pop(context, false),
+                        child: const Text("Batal"),
+                      ),
+                      ElevatedButton(
+                        onPressed: () => Navigator.pop(context, true),
+                        child: const Text("Restore"),
+                      ),
+                    ],
+                  ),
+                );
 
-                  if (confirmed == true) {
-                    try {
-                      await BackupService().restoreFromJsonBackup();
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(content: Text("✅ Restore berhasil")),
-                      );
-                    } catch (e) {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        SnackBar(content: Text("❌ Gagal restore: $e")),
-                      );
-                    }
+                if (confirmed == true) {
+                  try {
+                    await BackupService().restoreFromJsonBackup();
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(content: Text("✅ Restore berhasil")),
+                    );
+                  } catch (e) {
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      SnackBar(content: Text("❌ Gagal restore: $e")),
+                    );
                   }
-                },
-              ),
-            ],
+                }
+              },
+            ),
+          ],
           bottom: selectedBottomTab == 0
               ? const TabBar(
+                  indicatorColor: Colors.blue,
+                  labelStyle: TextStyle(fontWeight: FontWeight.w600),
                   tabs: [
                     Tab(text: "Pribadi"),
                     Tab(text: "Film/Drama"),
@@ -280,7 +289,6 @@ void _showLocalNotification(String? title, String? body) {
               child: selectedBottomTab == 0
                   ? Column(
                       children: const [
-                        // HomeBackupSyncButtons(),
                         Expanded(
                           child: TabBarView(
                             children: [
@@ -303,13 +311,22 @@ void _showLocalNotification(String? title, String? body) {
           ],
         ),
         bottomNavigationBar: NavigationBar(
+          height: 65,
           selectedIndex: selectedBottomTab,
           onDestinationSelected: (index) {
             setState(() => selectedBottomTab = index);
           },
           destinations: const [
-            NavigationDestination(icon: Icon(Icons.home), label: 'Home'),
-            NavigationDestination(icon: Icon(Icons.person), label: 'Profil'),
+            NavigationDestination(
+              icon: Icon(Icons.home_outlined),
+              selectedIcon: Icon(Icons.home),
+              label: 'Home',
+            ),
+            NavigationDestination(
+              icon: Icon(Icons.person_outline),
+              selectedIcon: Icon(Icons.person),
+              label: 'Profil',
+            ),
           ],
         ),
         floatingActionButton: selectedBottomTab == 0
@@ -357,6 +374,9 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
       context: context,
       builder: (_) {
         return AlertDialog(
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(16),
+          ),
           title: const Text("Masukkan PIN"),
           content: TextField(
             controller: controller,
@@ -393,7 +413,7 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) {
         return SafeArea(
@@ -423,6 +443,9 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
                   final result = await showDialog<String>(
                     context: context,
                     builder: (_) => AlertDialog(
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                      ),
                       title: Text(
                         note.isLocked ? "Buka Kunci" : "Atur PIN (4 angka)",
                       ),
@@ -520,6 +543,7 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
 
         return Column(
           children: [
+            // 🔍 Search Bar
             Padding(
               padding: const EdgeInsets.all(16),
               child: TextField(
@@ -529,42 +553,59 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
                   hintText: "Cari catatan...",
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
-                  fillColor: isDark ? Colors.grey[800] : Colors.grey[100],
+                  fillColor: isDark
+                      ? Colors.grey[850]
+                      : theme.colorScheme.surfaceVariant,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
                   ),
-                  hintStyle: TextStyle(
-                    color: isDark ? Colors.white54 : Colors.black54,
-                  ),
-                  prefixIconColor: isDark ? Colors.white54 : Colors.black54,
                 ),
-                style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontSize: 16,
+                ),
               ),
             ),
+
+            // 📝 Notes Grid
             Expanded(
               child: filteredNotes.isEmpty
-                  ? Center(
-                      child: Text(
-                        "Catatan tidak ditemukan.",
-                        style: TextStyle(
-                          color: isDark ? Colors.white70 : Colors.black54,
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.note_alt_outlined,
+                          size: 64,
+                          color: isDark ? Colors.white24 : Colors.black26,
                         ),
-                      ),
+                        const SizedBox(height: 12),
+                        Text(
+                          "Belum ada catatan",
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: isDark ? Colors.white60 : Colors.black54,
+                          ),
+                        ),
+                      ],
                     )
                   : GridView.builder(
-                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      padding: const EdgeInsets.symmetric(
+                        horizontal: 16,
+                        vertical: 8,
+                      ),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
-                            childAspectRatio: 1.2,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
+                            childAspectRatio: 0.95,
                           ),
                       itemCount: filteredNotes.length,
                       itemBuilder: (context, index) {
                         final note = filteredNotes[index];
-                        return GestureDetector(
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(20),
                           onTap: () {
                             if (note.isLocked) {
                               _showPinDialog(context, note.pin!, () {
@@ -583,53 +624,73 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
                             }
                           },
                           onLongPress: () {
-                            HapticFeedback.mediumImpact(); // 👉 HP getar pas long press
+                            HapticFeedback.mediumImpact();
                             _showNoteOptions(context, note);
                           },
                           child: Container(
-                            padding: const EdgeInsets.all(12),
+                            padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
                               color: isDark
                                   ? theme.colorScheme.surfaceVariant
-                                  : Colors.white,
-                              borderRadius: BorderRadius.circular(12),
+                                        .withOpacity(0.5)
+                                  : theme.colorScheme.surface,
+                              borderRadius: BorderRadius.circular(20),
                               boxShadow: [
                                 BoxShadow(
                                   color: isDark
                                       ? Colors.black.withOpacity(0.3)
-                                      : Colors.black.withOpacity(0.05),
-                                  blurRadius: 4,
-                                  offset: const Offset(0, 2),
+                                      : Colors.grey.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
                                 ),
                               ],
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                if (note.isPinned)
-                                  const Icon(
-                                    Icons.push_pin,
-                                    color: Colors.amber,
-                                    size: 18,
-                                  ),
+                                // 🔖 Top icons (pin / lock)
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  children: [
+                                    if (note.isPinned)
+                                      const Icon(
+                                        Icons.push_pin,
+                                        color: Colors.amber,
+                                        size: 18,
+                                      ),
+                                    if (note.isLocked)
+                                      const Padding(
+                                        padding: EdgeInsets.only(left: 4),
+                                        child: Icon(
+                                          Icons.lock,
+                                          color: Colors.redAccent,
+                                          size: 18,
+                                        ),
+                                      ),
+                                  ],
+                                ),
+                                const SizedBox(height: 8),
+                                // 📌 Title
                                 Text(
                                   note.title,
-                                  style: TextStyle(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: isDark ? Colors.white : Colors.black,
+                                  style: theme.textTheme.titleMedium?.copyWith(
+                                    fontWeight: FontWeight.w700,
+                                    color: isDark
+                                        ? Colors.white
+                                        : Colors.black87,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 6),
+                                const SizedBox(height: 8),
+                                // 📄 Content
                                 Expanded(
                                   child: Text(
-                                    note.isLocked ? '****' : note.content,
-                                    maxLines: 4,
+                                    note.isLocked ? "••••" : note.content,
+                                    maxLines: 6,
                                     overflow: TextOverflow.ellipsis,
-                                    style: TextStyle(
-                                      fontSize: 14,
+                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                      height: 1.4,
                                       color: isDark
                                           ? Colors.white70
                                           : Colors.black87,
@@ -665,7 +726,7 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
     showModalBottomSheet(
       context: context,
       shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(16)),
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
       ),
       builder: (_) {
         return SafeArea(
@@ -734,6 +795,7 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
 
         return Column(
           children: [
+            // 🔍 Search
             Padding(
               padding: const EdgeInsets.all(16),
               child: TextField(
@@ -743,45 +805,60 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                   hintText: "Cari film/drama...",
                   prefixIcon: const Icon(Icons.search),
                   filled: true,
-                  fillColor: isDark ? Colors.grey[800] : Colors.grey[100],
+                  fillColor: isDark
+                      ? Colors.grey[850]
+                      : theme.colorScheme.surfaceVariant,
+                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
                   border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(12),
+                    borderRadius: BorderRadius.circular(24),
                     borderSide: BorderSide.none,
                   ),
-                  hintStyle: TextStyle(
-                    color: isDark ? Colors.white54 : Colors.black54,
-                  ),
-                  prefixIconColor: isDark ? Colors.white54 : Colors.black54,
                 ),
-                style: TextStyle(color: isDark ? Colors.white : Colors.black),
+                style: TextStyle(
+                  color: isDark ? Colors.white : Colors.black87,
+                  fontSize: 16,
+                ),
               ),
             ),
+
+            // 🎬 Film Notes Grid
             Expanded(
               child: filteredNotes.isEmpty
-                  ? Center(
-                      child: Text(
-                        "Film/drama tidak ditemukan.",
-                        style: TextStyle(
-                          color: isDark ? Colors.white70 : Colors.black54,
+                  ? Column(
+                      mainAxisAlignment: MainAxisAlignment.center,
+                      children: [
+                        Icon(
+                          Icons.movie_creation_outlined,
+                          size: 64,
+                          color: isDark ? Colors.white24 : Colors.black26,
                         ),
-                      ),
+                        const SizedBox(height: 12),
+                        Text(
+                          "Belum ada catatan film/drama",
+                          style: theme.textTheme.titleMedium?.copyWith(
+                            color: isDark ? Colors.white60 : Colors.black54,
+                          ),
+                        ),
+                      ],
                     )
                   : GridView.builder(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
                         vertical: 8,
                       ),
-                      itemCount: filteredNotes.length,
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
-                            crossAxisSpacing: 12,
-                            mainAxisSpacing: 12,
+                            crossAxisSpacing: 14,
+                            mainAxisSpacing: 14,
                             childAspectRatio: 3 / 2,
                           ),
+                      itemCount: filteredNotes.length,
                       itemBuilder: (context, index) {
                         final note = filteredNotes[index];
-                        return GestureDetector(
+
+                        return InkWell(
+                          borderRadius: BorderRadius.circular(16),
                           onTap: () {
                             Navigator.pushNamed(
                               context,
@@ -792,44 +869,67 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                           onLongPress: () {
                             HapticFeedback.mediumImpact();
                             _showFilmNoteOptions(context, note);
-                          },  
-                          child: Card(
-                            elevation: 2,
-                            color: note.isFinished
-                                ? (isDark
-                                      ? Colors.green[900]
-                                      : Colors.green[50])
-                                : (isDark
-                                      ? theme.colorScheme.surfaceVariant
-                                      : Colors.white),
+                          },
+                          child: Container(
+                            decoration: BoxDecoration(
+                              borderRadius: BorderRadius.circular(16),
+                              color: note.isFinished
+                                  ? (isDark
+                                        ? Colors.green[900]
+                                        : Colors.green[50])
+                                  : (isDark
+                                        ? theme.colorScheme.surfaceVariant
+                                              .withOpacity(0.6)
+                                        : theme.colorScheme.surface),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: isDark
+                                      ? Colors.black.withOpacity(0.3)
+                                      : Colors.grey.withOpacity(0.15),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
                             child: Padding(
                               padding: const EdgeInsets.all(12),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  if (note.isPinned)
-                                    const Icon(
-                                      Icons.push_pin,
-                                      color: Colors.amber,
-                                      size: 18,
-                                    ),
+                                  // 📌 Pinned icon
+                                  Row(
+                                    mainAxisAlignment: MainAxisAlignment.end,
+                                    children: [
+                                      if (note.isPinned)
+                                        const Icon(
+                                          Icons.push_pin,
+                                          color: Colors.amber,
+                                          size: 18,
+                                        ),
+                                    ],
+                                  ),
+                                  const SizedBox(height: 4),
+
+                                  // 🎬 Title
                                   Text(
                                     note.title,
-                                    style: TextStyle(
-                                      fontWeight: FontWeight.bold,
-                                      fontSize: 14,
-                                      color: isDark
-                                          ? Colors.white
-                                          : Colors.black,
-                                    ),
+                                    style: theme.textTheme.titleMedium
+                                        ?.copyWith(
+                                          fontWeight: FontWeight.w700,
+                                          fontSize: 16,
+                                          color: isDark
+                                              ? Colors.white
+                                              : Colors.black87,
+                                        ),
                                     maxLines: 2,
                                     overflow: TextOverflow.ellipsis,
                                   ),
-                                  const Spacer(),
+                                  const SizedBox(height: 8),
+
+                                  // 📊 Progress
                                   Text(
                                     "Tahun: ${note.year}",
-                                    style: TextStyle(
-                                      fontSize: 12,
+                                    style: theme.textTheme.bodySmall?.copyWith(
                                       color: isDark
                                           ? Colors.white70
                                           : Colors.black54,
@@ -837,20 +937,38 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                                   ),
                                   Text(
                                     "Episode: ${note.episodeWatched}",
-                                    style: TextStyle(
-                                      fontSize: 12,
+                                    style: theme.textTheme.bodySmall?.copyWith(
                                       color: isDark
                                           ? Colors.white70
                                           : Colors.black54,
                                     ),
                                   ),
+                                  const Spacer(),
+
+                                  // Status bar
+                                  if (!note.isFinished)
+                                    LinearProgressIndicator(
+                                      value:
+                                          (note.totalEpisodes != null &&
+                                              note.totalEpisodes! > 0)
+                                          ? note.episodeWatched /
+                                                note.totalEpisodes!
+                                          : 0,
+                                      backgroundColor: isDark
+                                          ? Colors.white10
+                                          : Colors.grey[200],
+                                      color: Colors.blueAccent,
+                                      minHeight: 4,
+                                      borderRadius: BorderRadius.circular(8),
+                                    ),
+
                                   if (note.isFinished)
                                     const Align(
                                       alignment: Alignment.bottomRight,
                                       child: Icon(
                                         Icons.check_circle,
                                         color: Colors.green,
-                                        size: 16,
+                                        size: 20,
                                       ),
                                     ),
                                 ],
@@ -922,18 +1040,23 @@ class BannerWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    final changelogItems = changelog
+        .split("\n")
+        .where((e) => e.trim().isNotEmpty)
+        .toList();
+
     return Positioned(
       top: 60,
       left: 16,
       right: 16,
       child: Material(
-        elevation: 6,
-        borderRadius: BorderRadius.circular(16),
+        elevation: 8,
+        borderRadius: BorderRadius.circular(20),
+        color: theme.colorScheme.surface,
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            color: theme.colorScheme.surfaceVariant,
-            borderRadius: BorderRadius.circular(16),
+            borderRadius: BorderRadius.circular(20),
             border: Border(
               left: BorderSide(color: theme.colorScheme.primary, width: 5),
             ),
@@ -942,38 +1065,71 @@ class BannerWidget extends StatelessWidget {
             mainAxisSize: MainAxisSize.min,
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
+              // 🔹 Header
               Row(
                 children: [
-                  Icon(
-                    Icons.system_update_alt_rounded,
-                    color: theme.colorScheme.primary,
+                  CircleAvatar(
+                    radius: 16,
+                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
+                    child: Icon(
+                      Icons.system_update_alt_rounded,
+                      size: 18,
+                      color: theme.colorScheme.primary,
+                    ),
                   ),
-                  const SizedBox(width: 8),
+                  const SizedBox(width: 12),
                   Expanded(
                     child: Text(
                       message,
                       style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w600,
                       ),
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 8),
+
+              const SizedBox(height: 12),
+
+              // 📜 Changelog scrollable
               SizedBox(
                 height: 120,
-                child: SingleChildScrollView(
-                  child: Text(
-                    changelog.split("\n").map((e) => "• $e").join("\n"),
-                    style: theme.textTheme.bodyMedium,
+                child: Scrollbar(
+                  thumbVisibility: true,
+                  radius: const Radius.circular(8),
+                  child: ListView.separated(
+                    itemCount: changelogItems.length,
+                    itemBuilder: (context, index) {
+                      return Row(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text("• "),
+                          Expanded(
+                            child: Text(
+                              changelogItems[index],
+                              style: theme.textTheme.bodyMedium,
+                            ),
+                          ),
+                        ],
+                      );
+                    },
+                    separatorBuilder: (_, __) => const SizedBox(height: 4),
                   ),
                 ),
               ),
-              const SizedBox(height: 12),
+
+              const SizedBox(height: 16),
+
+              // 🔘 Buttons
               Row(
                 mainAxisAlignment: MainAxisAlignment.end,
                 children: [
-                  ElevatedButton.icon(
+                  OutlinedButton(
+                    onPressed: onClose,
+                    child: const Text("Tutup"),
+                  ),
+                  const SizedBox(width: 12),
+                  FilledButton.icon(
                     onPressed: () async {
                       final uri = Uri.parse(url);
                       if (await canLaunchUrl(uri)) {
@@ -992,8 +1148,6 @@ class BannerWidget extends StatelessWidget {
                     icon: const Icon(Icons.open_in_new, size: 18),
                     label: const Text("Update"),
                   ),
-                  const SizedBox(width: 8),
-                  TextButton(onPressed: onClose, child: const Text("Tutup")),
                 ],
               ),
             ],
