@@ -350,11 +350,16 @@ class _HomeScreenState extends State<HomeScreen> {
           children: [
             AnimatedSwitcher(
               duration: const Duration(milliseconds: 350),
-              child: selectedBottomTab == 0
-                  ? const TabBarView(
-                      children: [PersonalNotesContent(), FilmNotesContent()],
-                    )
-                  : const ProfileScreen(),
+              child: Padding(
+                padding: const EdgeInsets.only(
+                  bottom: 80,
+                ), // 👈 tinggi nav bar custom kamu
+                child: selectedBottomTab == 0
+                    ? const TabBarView(
+                        children: [PersonalNotesContent(), FilmNotesContent()],
+                      )
+                    : const ProfileScreen(),
+              ),
             ),
             if (showBanner)
               Align(
@@ -406,7 +411,7 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         bottomNavigationBar: Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
           decoration: BoxDecoration(
             color: Theme.of(context).colorScheme.surface,
             borderRadius: BorderRadius.circular(20),
