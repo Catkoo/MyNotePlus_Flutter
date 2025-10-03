@@ -8,6 +8,7 @@ import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/services.dart';
+import 'package:flutter_speed_dial/flutter_speed_dial.dart';
 import '../widgets/home_backup_sync_buttons.dart';
 import '../viewmodel/note_view_model.dart';
 import '../viewmodel/film_note_viewmodel.dart';
@@ -49,11 +50,9 @@ class _HomeScreenState extends State<HomeScreen> {
     WidgetsBinding.instance.addPostFrameCallback((_) {
       final user = FirebaseAuth.instance.currentUser;
       if (user != null) {
-        // Clear data lama
         Provider.of<NoteViewModel>(context, listen: false).clear();
         Provider.of<FilmNoteViewModel>(context, listen: false).clear();
 
-        // Start listener baru
         Provider.of<NoteViewModel>(context, listen: false).startNoteListener();
         Provider.of<FilmNoteViewModel>(
           context,
@@ -168,14 +167,24 @@ class _HomeScreenState extends State<HomeScreen> {
     return DefaultTabController(
       length: 2,
       child: Scaffold(
+        extendBody: true,
         appBar: AppBar(
-          elevation: 2,
-          backgroundColor: Theme.of(context).colorScheme.surface,
+          elevation: 0,
+          scrolledUnderElevation: 0,
+          backgroundColor: Theme.of(
+            context,
+          ).colorScheme.surface.withOpacity(0.95),
           title: const Text(
             "MyNotePlus",
-            style: TextStyle(fontWeight: FontWeight.bold),
+            style: TextStyle(
+              fontWeight: FontWeight.bold,
+              fontSize: 20,
+              letterSpacing: 0.5,
+            ),
           ),
+          centerTitle: true,
           actions: [
+            // Notification icon
             IconButton(
               tooltip: "Notifikasi",
               onPressed: () async {
@@ -183,33 +192,37 @@ class _HomeScreenState extends State<HomeScreen> {
               },
               icon: Stack(
                 children: [
-                  const Icon(Icons.notifications_outlined),
+                  const Icon(Icons.notifications_outlined, size: 26),
                   if (hasUnread)
                     Positioned(
                       right: 0,
                       top: 0,
                       child: Container(
-                        padding: const EdgeInsets.all(2),
+                        height: 16,
+                        width: 16,
                         decoration: const BoxDecoration(
                           color: Colors.red,
                           shape: BoxShape.circle,
                         ),
-                        constraints: const BoxConstraints(
-                          minWidth: 14,
-                          minHeight: 14,
-                        ),
-                        child: const Text(
-                          '!',
-                          style: TextStyle(color: Colors.white, fontSize: 10),
-                          textAlign: TextAlign.center,
+                        child: const Center(
+                          child: Text(
+                            '!',
+                            style: TextStyle(
+                              color: Colors.white,
+                              fontSize: 11,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
                         ),
                       ),
                     ),
                 ],
               ),
             ),
+
+            // Backup
             IconButton(
-              icon: const Icon(Icons.cloud_upload_outlined),
+              icon: const Icon(Icons.cloud_upload_outlined, size: 24),
               tooltip: "Backup ke Google Drive",
               onPressed: () async {
                 try {
@@ -219,26 +232,41 @@ class _HomeScreenState extends State<HomeScreen> {
                     "mynoteplus_backup.json",
                   );
                   ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text(
+                    SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      content: const Text(
                         "✅ Backup berhasil diupload ke Google Drive",
                       ),
                     ),
                   );
                 } catch (e) {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(SnackBar(content: Text("❌ Gagal backup: $e")));
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    SnackBar(
+                      behavior: SnackBarBehavior.floating,
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      content: Text("❌ Gagal backup: $e"),
+                    ),
+                  );
                 }
               },
             ),
+
+            // Restore
             IconButton(
-              icon: const Icon(Icons.cloud_download_outlined),
+              icon: const Icon(Icons.cloud_download_outlined, size: 24),
               tooltip: "Restore dari Google Drive",
               onPressed: () async {
                 final confirmed = await showDialog<bool>(
                   context: context,
                   builder: (_) => AlertDialog(
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(16),
+                    ),
                     title: const Text("Konfirmasi Restore"),
                     content: const Text(
                       "Data saat ini akan ditimpa. Lanjutkan?",
@@ -249,6 +277,11 @@ class _HomeScreenState extends State<HomeScreen> {
                         child: const Text("Batal"),
                       ),
                       ElevatedButton(
+                        style: ElevatedButton.styleFrom(
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                        ),
                         onPressed: () => Navigator.pop(context, true),
                         child: const Text("Restore"),
                       ),
@@ -260,11 +293,23 @@ class _HomeScreenState extends State<HomeScreen> {
                   try {
                     await BackupService().restoreFromJsonBackup();
                     ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text("✅ Restore berhasil")),
+                      SnackBar(
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        content: const Text("✅ Restore berhasil"),
+                      ),
                     );
                   } catch (e) {
                     ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(content: Text("❌ Gagal restore: $e")),
+                      SnackBar(
+                        behavior: SnackBarBehavior.floating,
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        content: Text("❌ Gagal restore: $e"),
+                      ),
                     );
                   }
                 }
@@ -272,79 +317,160 @@ class _HomeScreenState extends State<HomeScreen> {
             ),
           ],
           bottom: selectedBottomTab == 0
-              ? const TabBar(
-                  indicatorColor: Colors.blue,
-                  labelStyle: TextStyle(fontWeight: FontWeight.w600),
-                  tabs: [
-                    Tab(text: "Pribadi"),
-                    Tab(text: "Film/Drama"),
-                  ],
+              ? PreferredSize(
+                  preferredSize: const Size.fromHeight(50),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TabBar(
+                      indicator: BoxDecoration(
+                        borderRadius: BorderRadius.circular(12),
+                        color: Theme.of(context).colorScheme.primaryContainer,
+                      ),
+                      indicatorSize: TabBarIndicatorSize.tab,
+                      labelStyle: const TextStyle(
+                        fontWeight: FontWeight.w600,
+                        fontSize: 14,
+                      ),
+                      unselectedLabelColor: Theme.of(
+                        context,
+                      ).colorScheme.onSurfaceVariant,
+                      labelColor: Theme.of(
+                        context,
+                      ).colorScheme.onPrimaryContainer,
+                      tabs: const [
+                        Tab(text: "Pribadi"),
+                        Tab(text: "Film/Drama"),
+                      ],
+                    ),
+                  ),
                 )
               : null,
         ),
         body: Stack(
           children: [
             AnimatedSwitcher(
-              duration: const Duration(milliseconds: 300),
+              duration: const Duration(milliseconds: 350),
               child: selectedBottomTab == 0
-                  ? Column(
-                      children: const [
-                        Expanded(
-                          child: TabBarView(
-                            children: [
-                              PersonalNotesContent(),
-                              FilmNotesContent(),
-                            ],
-                          ),
-                        ),
-                      ],
+                  ? const TabBarView(
+                      children: [PersonalNotesContent(), FilmNotesContent()],
                     )
-                  : ProfileScreen(),
+                  : const ProfileScreen(),
             ),
             if (showBanner)
-              BannerWidget(
-                message: "Tersedia versi baru!",
-                url: updateUrl,
-                changelog: updateChangelog,
-                onClose: () => setState(() => showBanner = false),
+              Align(
+                alignment: Alignment.topCenter,
+                child: Padding(
+                  padding: const EdgeInsets.all(12.0),
+                  child: Card(
+                    elevation: 8,
+                    shadowColor: Colors.black45,
+                    color: Theme.of(
+                      context,
+                    ).colorScheme.primary.withOpacity(0.95),
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(18),
+                    ),
+                    child: ListTile(
+                      leading: const Icon(
+                        Icons.system_update,
+                        color: Colors.white,
+                        size: 28,
+                      ),
+                      title: const Text(
+                        "Tersedia versi baru!",
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      subtitle: Text(
+                        updateChangelog,
+                        style: const TextStyle(color: Colors.white70),
+                      ),
+                      trailing: IconButton(
+                        icon: const Icon(Icons.close, color: Colors.white),
+                        onPressed: () => setState(() => showBanner = false),
+                      ),
+                      onTap: () async {
+                        if (await canLaunchUrl(Uri.parse(updateUrl))) {
+                          launchUrl(
+                            Uri.parse(updateUrl),
+                            mode: LaunchMode.externalApplication,
+                          );
+                        }
+                      },
+                    ),
+                  ),
+                ),
               ),
           ],
         ),
-        bottomNavigationBar: NavigationBar(
-          height: 65,
-          selectedIndex: selectedBottomTab,
-          onDestinationSelected: (index) {
-            setState(() => selectedBottomTab = index);
-          },
-          destinations: const [
-            NavigationDestination(
-              icon: Icon(Icons.home_outlined),
-              selectedIcon: Icon(Icons.home),
-              label: 'Home',
-            ),
-            NavigationDestination(
-              icon: Icon(Icons.person_outline),
-              selectedIcon: Icon(Icons.person),
-              label: 'Profil',
-            ),
-          ],
+        bottomNavigationBar: Container(
+          margin: const EdgeInsets.fromLTRB(16, 0, 16, 16),
+          decoration: BoxDecoration(
+            color: Theme.of(context).colorScheme.surface,
+            borderRadius: BorderRadius.circular(20),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.05),
+                blurRadius: 12,
+                offset: const Offset(0, 6),
+              ),
+            ],
+          ),
+          child: NavigationBar(
+            height: 65,
+            backgroundColor: Colors.transparent,
+            selectedIndex: selectedBottomTab,
+            onDestinationSelected: (index) {
+              setState(() => selectedBottomTab = index);
+            },
+            destinations: const [
+              NavigationDestination(
+                icon: Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home),
+                label: 'Home',
+              ),
+              NavigationDestination(
+                icon: Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person),
+                label: 'Profil',
+              ),
+            ],
+          ),
         ),
         floatingActionButton: selectedBottomTab == 0
-            ? Builder(
-                builder: (context) {
-                  return FloatingActionButton.extended(
-                    onPressed: () {
-                      final tabIndex = DefaultTabController.of(context).index;
-                      if (tabIndex == 0) {
-                        Navigator.pushNamed(context, '/add_note');
-                      } else {
-                        Navigator.pushNamed(context, '/add_film_note');
-                      }
+            ? SpeedDial(
+                animatedIcon: AnimatedIcons.add_event,
+                backgroundColor: Theme.of(context).colorScheme.primary,
+                overlayColor: Colors.black,
+                overlayOpacity: 0.3,
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(16),
+                ),
+                children: [
+                  SpeedDialChild(
+                    child: const Icon(Icons.edit_note, color: Colors.white),
+                    backgroundColor: Theme.of(context).colorScheme.primary,
+                    label: "Tambah Catatan",
+                    labelStyle: const TextStyle(fontSize: 14),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/add_note');
                     },
-                    icon: const Icon(Icons.add),
-                    label: const Text("Tambah"),
-                  );
-                },
+                  ),
+                  SpeedDialChild(
+                    child: const Icon(
+                      Icons.movie_creation_outlined,
+                      color: Colors.white,
+                    ),
+                    backgroundColor: Theme.of(context).colorScheme.secondary,
+                    label: "Tambah Film",
+                    labelStyle: const TextStyle(fontSize: 14),
+                    onTap: () {
+                      Navigator.pushNamed(context, '/add_film_note');
+                    },
+                  ),
+                ],
               )
             : null,
       ),
