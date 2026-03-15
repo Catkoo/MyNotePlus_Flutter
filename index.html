@@ -5,114 +5,223 @@
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <link rel="icon" type="image/png" href="icon/mynoteplus.png" />
-    <title>MyNotePlus Blog</title>
-    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;800&display=swap" rel="stylesheet">
+    <title>MyNotePlus Blog | Versi Terbaru v1.0.7</title>
+    <link href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700;800&display=swap" rel="stylesheet">
     <style>
+        :root {
+            --primary: #6c5ce7;
+            --accent: #ffdd57;
+            --danger: #ff4757;
+            --glass: rgba(255, 255, 255, 0.07);
+            --bg-gradient: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+        }
+
         body {
             margin: 0;
             font-family: 'Poppins', sans-serif;
-            background: linear-gradient(135deg, #0f0c29, #302b63, #24243e);
+            background: var(--bg-gradient);
             color: #fff;
+            scroll-behavior: smooth;
+            line-height: 1.6;
         }
 
+        /* Navbar Modern */
         header {
-            padding: 1rem 2rem;
+            padding: 1rem 10%;
             display: flex;
             justify-content: space-between;
             align-items: center;
-            background: rgba(0, 0, 0, 0.5);
-            backdrop-filter: blur(8px);
+            background: rgba(15, 12, 41, 0.8);
+            backdrop-filter: blur(12px);
             position: sticky;
             top: 0;
             z-index: 1000;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
         }
 
         header h1 {
             font-weight: 800;
-            color: #ffdd57;
+            font-size: 1.5rem;
+            background: linear-gradient(to right, #ffdd57, #ff9f43);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            margin: 0;
         }
 
         nav a {
-            margin-left: 1rem;
-            color: #fff;
+            margin-left: 1.5rem;
+            color: rgba(255,255,255,0.8);
             text-decoration: none;
             font-weight: 600;
+            transition: 0.3s;
+            font-size: 0.9rem;
         }
 
         nav a:hover {
-            color: #ffdd57;
+            color: var(--accent);
         }
 
+        /* Hero Section */
         .hero {
             text-align: center;
-            padding: 4rem 2rem;
+            padding: 6rem 2rem;
+            background: radial-gradient(circle at center, rgba(108, 92, 231, 0.15) 0%, transparent 70%);
         }
 
         .hero h2 {
-            font-size: 2.5rem;
+            font-size: clamp(2rem, 5vw, 3.5rem);
             font-weight: 800;
+            margin-bottom: 1rem;
+            letter-spacing: -1px;
+        }
+
+        .hero p {
+            max-width: 600px;
+            margin: 0 auto;
+            opacity: 0.8;
+            font-size: 1.1rem;
+        }
+
+        /* Badge Versi */
+        .version-badge {
+            display: inline-block;
+            background: var(--primary);
+            color: white;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+            font-weight: 700;
+            margin-bottom: 1rem;
         }
 
         .btn {
             display: inline-block;
             margin-top: 2rem;
-            padding: 0.8rem 1.6rem;
-            background: #ffdd57;
+            padding: 1rem 2.5rem;
+            background: var(--accent);
             color: #000;
             font-weight: 700;
-            border-radius: 999px;
+            border-radius: 14px;
             text-decoration: none;
+            transition: all 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+            box-shadow: 0 10px 20px rgba(255, 221, 87, 0.2);
         }
 
-        .maintenance {
-            background: #ff4757;
-            padding: 1rem;
-            text-align: center;
-            font-weight: 600;
-            animation: blink 1.5s infinite;
-        }
-
-        @keyframes blink {
-            50% {
-                opacity: 0.6;
-            }
+        .btn:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 15px 30px rgba(255, 221, 87, 0.4);
         }
 
         section {
             max-width: 900px;
             margin: auto;
-            padding: 3rem 2rem;
+            padding: 4rem 2rem;
         }
 
         h3 {
-            color: #ffdd57;
-            margin-bottom: 1rem;
+            font-size: 1.8rem;
+            color: var(--accent);
+            margin-bottom: 2rem;
+            display: flex;
+            align-items: center;
+            gap: 10px;
         }
 
-        .update-item {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 1rem;
+        /* Update Item Card */
+        .update-card {
+            background: var(--glass);
+            padding: 2.5rem;
+            border-radius: 24px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            margin-bottom: 2rem;
+            position: relative;
+            overflow: hidden;
         }
 
+        .update-card::before {
+            content: '';
+            position: absolute;
+            top: 0; left: 0; width: 4px; height: 100%;
+            background: var(--primary);
+        }
+
+        .update-card h4 {
+            font-size: 1.5rem;
+            margin-top: 0;
+            color: #fff;
+        }
+
+        .feature-tag {
+            display: inline-block;
+            padding: 2px 10px;
+            background: rgba(108, 92, 231, 0.2);
+            color: #a29bfe;
+            border-radius: 6px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-bottom: 0.5rem;
+        }
+
+        ul {
+            padding-left: 1.2rem;
+            margin: 1rem 0;
+        }
+
+        li {
+            margin-bottom: 0.5rem;
+            color: rgba(255,255,255,0.8);
+        }
+
+        /* Riwayat Styles */
         details {
-            background: rgba(255, 255, 255, 0.05);
-            padding: 1rem;
-            border-radius: 10px;
-            margin-bottom: 1rem;
+            background: rgba(0, 0, 0, 0.2);
+            border-radius: 16px;
+            overflow: hidden;
+            transition: 0.3s;
         }
 
         summary {
+            padding: 1.2rem;
             cursor: pointer;
             font-weight: 700;
+            list-style: none;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
         }
+
+        summary::after {
+            content: '▼';
+            font-size: 0.8rem;
+            transition: 0.3s;
+        }
+
+        details[open] summary::after {
+            transform: rotate(180deg);
+        }
+
+        .old-update {
+            padding: 1rem 1.2rem;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            font-size: 0.9rem;
+        }
+
+        .old-update h5 { margin: 0; color: var(--primary); }
 
         footer {
             text-align: center;
-            padding: 2rem;
-            font-size: 0.9rem;
-            opacity: 0.7;
+            padding: 4rem 2rem;
+            font-size: 0.85rem;
+            border-top: 1px solid rgba(255,255,255,0.05);
+            background: rgba(0,0,0,0.2);
+        }
+
+        /* Mobile Adjustments */
+        @media (max-width: 600px) {
+            header { padding: 1rem 5%; }
+            .hero { padding: 4rem 1rem; }
+            .update-card { padding: 1.5rem; }
         }
     </style>
 </head>
@@ -122,87 +231,79 @@
         <h1>MyNotePlus</h1>
         <nav>
             <a href="#updates">Update</a>
-            <a href="#contact">Hubungi Kami</a>
+            <a href="#contact">Contact</a>
         </nav>
     </header>
 
-    <!-- 🚧 Banner Maintenance (hapus/comment kalau tidak dipakai)
-    <div class="maintenance">
-        🚧 Sedang Maintenance! Beberapa fitur mungkin tidak tersedia 🚧
-    </div> -->
-
     <section class="hero">
-        <h2>✨ Blog & Update MyNotePlus</h2>
-        <p>Aplikasi catatan pribadi & film/drama yang modern, ringan, dan praktis. Dibuat dengan Flutter & Firebase.</p>
-        <a class="btn" href="https://github.com/Catkoo/MyNotePlus_Flutter/releases/download/v1.0.6/mynoteplus.apk" target="_blank">📥 Download APK
-            v1.0.6</a>
+        <div class="version-badge">Hot Release 🔥</div>
+        <h2>Satu Aplikasi,<br>Berjuta Catatan.</h2>
+        <p>Kelola catatan teks dan daftar film favoritmu dalam satu genggaman yang estetik, ringan, dan aman.</p>
+        <a class="btn" href="https://github.com/Catkoo/MyNotePlus_Flutter/releases/download/v1.0.7/mynoteplus.apk" target="_blank">📥 Download v1.0.7 (APK)</a>
     </section>
 
     <section id="updates">
-        <h3>🔥 Yang Baru</h3>
+        <h3>🚀 Versi Terbaru</h3>
 
-        <!-- 🆕 Versi Terbaru -->
-        <div class="update-item">
-            <h4>✨ V1.0.6</h4>
-            <p><strong>🧹 Perbaikan Bug</strong><br>
-                - Bug kecil pada catatan film & catatan teks diperbaiki<br>
-                - Performa sinkronisasi data lebih stabil<br>
-                - Optimisasi loading profil & home
-            </p>
-        
-            <p><strong>🗑️ Penghapusan Fitur</strong><br>
-                - Fitur <em>Reminder</em> resmi dihapus karena dinilai membebani aplikasi<br>
-                - Semua kode terkait notifikasi & jadwal otomatis telah dibersihkan
-            </p>
-        
-            <p><strong>🎨 UI/UX</strong><br>
-                - Penyegaran desain pada halaman <b>Home</b> agar lebih rapi & modern<br>
-                - Tombol <b>Tambah (+)</b> kini menggunakan model <i>Speed Dial</i> dengan animasi halus<br>
-                - Halaman <b>Profile</b> tetap konsisten dengan desain versi sebelumnya
-            </p>
-        
-            <p><strong>📢 Tips</strong>: Lakukan backup data secara rutin agar lebih aman.<br>
-                <strong>📲 Rekomendasi</strong>: segera update ke v1.0.6 untuk pengalaman lebih stabil 🚀
+        <div class="update-card">
+            <span class="feature-tag">Latest Update</span>
+            <h4>✨ V1.0.7 </h4>
+            
+            <p><strong>⚡ Optimasi Performa</strong></p>
+            <ul>
+                <li><strong>Tampilan UI Baru:</strong> Pembahruan UI Home, Catatan (Note), Filim & Profile</li>
+                <li><strong>Fix Blank Hitam:</strong> Perbaikan alur startup agar aplikasi langsung menampilkan Splash Screen tanpa delay layar hitam.</li>
+                <li><strong>Auto-Backup Background:</strong> Sistem backup ke Google Drive kini berjalan di latar belakang (paralel) sehingga tidak menghambat navigasi user.</li>
+            </ul>
+
+            <p><strong>🛠️ Peningkatan Sistem</strong></p>
+            <ul>
+                <li>Integrasi Firebase Core terbaru untuk sinkronisasi yang lebih cepat.</li>
+                <li>Pembersihan kode notifikasi yang tidak terpakai (Code Cleanup).</li>
+                <li>Peningkatan keamanan sesi Google Sign-In.</li>
+            </ul>
+
+            <p style="margin-top: 1.5rem; font-style: italic; color: var(--accent); font-size: 0.9rem;">
+                "Fokus versi ini adalah stabilitas, UI dan kecepatan buka aplikasi. Segera update untuk kenyamanan maksimal!"
             </p>
         </div>
-        
-        <!-- Versi lama collapsible -->
+
         <details>
-            <summary>✨ Riwayat Update Sebelumnya</summary>
-                <div class="update-item">
-                    <h4>V1.0.5</h4>
-                    <p>⚠️ Perubahan database internal, 🚀 performa & stabilitas lebih baik, 🎨 UI/UX lebih modern,
-                        🔐 keamanan ditingkatkan, 🆕 fitur baru (edit cepat, getar, tombol backup),
-                        🧹 bugfix judul catatan & glitch navigasi.</p>
-                </div>
-            <div class="update-item">
-                <h4>V1.0.4</h4>
-                <p>🛠️ Penyempurnaan backup & restore, 🔐 keamanan data, 🖥️ UI modern, 🗑️ hapus akun, 📤 berbagi
-                    catatan, 🧹 bugfix.</p>
+            <summary>📦 Riwayat Versi Sebelumnya</summary>
+            
+            <div class="old-update">
+                <h5>V1.0.6</h5>
+                <p>Penyegaran desain Home, implementasi Speed Dial Button, dan pembersihan fitur Reminder.</p>
             </div>
-            <div class="update-item">
-                <h4>V1.0.3</h4>
-                <p>🛠️ Backup & Restore ke Google Drive, 📂 JSON universal, 🔁 restore otomatis, 🐞 bugfix.</p>
+
+            <div class="old-update">
+                <h5>V1.0.5</h5>
+                <p>Database internal revamp, peningkatan fitur keamanan, dan perbaikan glitch navigasi.</p>
             </div>
-            <div class="update-item">
-                <h4>V1.0.2</h4>
-                <p>🔔 Notifikasi in-app, 🎬 peningkatan FilmNote, 📌 pin cerdas, 🌗 mode gelap, 🐞 bugfix.</p>
+
+            <div class="old-update">
+                <h5>V1.0.4</h5>
+                <p>Penyempurnaan Backup/Restore, penambahan fitur hapus akun, dan fitur berbagi catatan.</p>
             </div>
-            <div class="update-item">
-                <h4>V1.0.1 & V1.0.0</h4>
-                <p>🚀 Versi Flutter pertama, desain ulang profil, banner update via Firebase, optimisasi UI/UX.</p>
+            
+            <div class="old-update">
+                <h5>V1.0.0 - V1.0.3</h5>
+                <p>Rilis perdana Flutter, Mode Gelap, dan integrasi Google Drive API.</p>
             </div>
         </details>
     </section>
 
     <section id="contact" style="text-align:center;">
-        <h3>📩 Hubungi Kami</h3>
-        <p>Kami ingin mendengar masukanmu!<br>Silakan kirim pesan lewat Google Form berikut:</p>
-        <a class="btn" href="https://forms.gle/WT2k6S9S6mXeo3c3A" target="_blank">✍️ Isi Form</a>
+        <div style="background: var(--glass); padding: 3rem; border-radius: 30px;">
+            <h3>📩 Ada Saran?</h3>
+            <p>Masukanmu sangat berarti bagi perkembangan MyNotePlus!</p>
+            <a class="btn" href="https://forms.gle/WT2k6S9S6mXeo3c3A" target="_blank" style="background:#fff; color: #000;">✍️ Isi Form Saran</a>
+        </div>
     </section>
 
     <footer>
-        © 2025 MyNotePlus. Dibuat dengan ❤️ untuk generasi kreatif.
+        © 2026 MyNotePlus. Dibuat dengan ❤️ di Indonesia.<br>
+        <span style="opacity: 0.5;">Aplikasi catatan masa depan untuk generasi kreatif.</span>
     </footer>
 </body>
 

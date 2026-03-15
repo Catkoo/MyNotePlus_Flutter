@@ -164,6 +164,9 @@ class _HomeScreenState extends State<HomeScreen> {
       return MaintenanceScreen(message: maintenanceMessage);
     }
 
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
     return DefaultTabController(
       length: 2,
       child: Scaffold(
@@ -446,34 +449,35 @@ class _HomeScreenState extends State<HomeScreen> {
         ),
         floatingActionButton: selectedBottomTab == 0
             ? SpeedDial(
-                animatedIcon: AnimatedIcons.add_event,
+                icon: Icons.add_rounded, 
+                activeIcon: Icons.close_rounded,
+                spacing: 12, // Jarak antara tombol utama dan anak-anaknya
+                spaceBetweenChildren: 8,
                 backgroundColor: Theme.of(context).colorScheme.primary,
+                foregroundColor: Colors.white,
                 overlayColor: Colors.black,
-                overlayOpacity: 0.3,
+                overlayOpacity: 0.4, // Sedikit lebih gelap agar fokus ke menu
                 shape: RoundedRectangleBorder(
-                  borderRadius: BorderRadius.circular(16),
+                  borderRadius: BorderRadius.circular(18), // Sedikit lebih bulat agar matching dengan card
                 ),
+                elevation: 8,
+                animationCurve: Curves.easeInOut,
                 children: [
                   SpeedDialChild(
-                    child: const Icon(Icons.edit_note, color: Colors.white),
-                    backgroundColor: Theme.of(context).colorScheme.primary,
-                    label: "Tambah Catatan",
-                    labelStyle: const TextStyle(fontSize: 14),
-                    onTap: () {
-                      Navigator.pushNamed(context, '/add_note');
-                    },
+                    child: const Icon(Icons.movie_filter_rounded, color: Colors.white),
+                    backgroundColor: Colors.orange[400], // Warna yang ceria untuk film
+                    label: "Tambah Progres Film",
+                    labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+                    labelBackgroundColor: isDark ? Colors.grey[800] : Colors.white,
+                    onTap: () => Navigator.pushNamed(context, '/add_film_note'),
                   ),
                   SpeedDialChild(
-                    child: const Icon(
-                      Icons.movie_creation_outlined,
-                      color: Colors.white,
-                    ),
-                    backgroundColor: Theme.of(context).colorScheme.secondary,
-                    label: "Tambah Film",
-                    labelStyle: const TextStyle(fontSize: 14),
-                    onTap: () {
-                      Navigator.pushNamed(context, '/add_film_note');
-                    },
+                    child: const Icon(Icons.edit_note_rounded, color: Colors.white),
+                    backgroundColor: Colors.blue[400], // Warna kalem untuk catatan
+                    label: "Buat Catatan Umum",
+                    labelStyle: const TextStyle(fontWeight: FontWeight.w600),
+                    labelBackgroundColor: isDark ? Colors.grey[800] : Colors.white,
+                    onTap: () => Navigator.pushNamed(context, '/add_note'),
                   ),
                 ],
               )
@@ -645,6 +649,31 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
     );
   }
 
+    Color _getNoteColor(int index, bool isDark) {
+    // Daftar warna pastel untuk mode terang
+    final lightColors = [
+      const Color(0xFFE3F2FD), // Biru muda
+      const Color(0xFFF1F8E9), // Hijau muda
+      const Color(0xFFFFF3E0), // Oranye muda
+      const Color(0xFFFCE4EC), // Pink muda
+      const Color(0xFFF3E5F5), // Ungu muda
+    ];
+
+    // Daftar warna gelap yang elegan untuk mode gelap
+    final darkColors = [
+      const Color(0xFF1A237E).withOpacity(0.3), // Dark Blue
+      const Color(0xFF1B5E20).withOpacity(0.3), // Dark Green
+      const Color(0xFF4E342E).withOpacity(0.3), // Dark Brown
+      const Color(0xFF311B92).withOpacity(0.3), // Dark Purple
+    ];
+
+    if (isDark) {
+      return darkColors[index % darkColors.length];
+    } else {
+      return lightColors[index % lightColors.length];
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
@@ -680,19 +709,18 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
               child: TextField(
                 controller: _searchController,
                 onChanged: (value) => setState(() => _searchQuery = value),
-                decoration: InputDecoration(
-                  hintText: "Cari catatan...",
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: isDark
-                      ? Colors.grey[850]
-                      : theme.colorScheme.surfaceVariant,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
+                  decoration: InputDecoration(
+                    hintText: "Cari catatan...",
+                    hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+                    prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
+                    filled: true,
+                    fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                    contentPadding: const EdgeInsets.symmetric(vertical: 0), // Biar lebih ramping
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide.none,
+                    ),
                   ),
-                ),
                 style: TextStyle(
                   color: isDark ? Colors.white : Colors.black87,
                   fontSize: 16,
@@ -761,17 +789,16 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              color: isDark
-                                  ? theme.colorScheme.surfaceVariant
-                                        .withOpacity(0.5)
-                                  : theme.colorScheme.surface,
-                              borderRadius: BorderRadius.circular(20),
+                              // Menggunakan fungsi getNoteColor yang kita bahas sebelumnya
+                              color: _getNoteColor(index, isDark), 
+                              borderRadius: BorderRadius.circular(24),
+                              border: Border.all(
+                                color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+                              ),
                               boxShadow: [
                                 BoxShadow(
-                                  color: isDark
-                                      ? Colors.black.withOpacity(0.3)
-                                      : Colors.grey.withOpacity(0.15),
-                                  blurRadius: 8,
+                                  color: isDark ? Colors.black26 : Colors.grey.withOpacity(0.1),
+                                  blurRadius: 10,
                                   offset: const Offset(0, 4),
                                 ),
                               ],
@@ -779,53 +806,76 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // 🔖 Top icons (pin / lock)
+                                // --- HEADER: TANGGAL & STATUS ---
                                 Row(
-                                  mainAxisAlignment: MainAxisAlignment.end,
+                                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
-                                    if (note.isPinned)
-                                      const Icon(
-                                        Icons.push_pin,
-                                        color: Colors.amber,
-                                        size: 18,
-                                      ),
-                                    if (note.isLocked)
-                                      const Padding(
-                                        padding: EdgeInsets.only(left: 4),
-                                        child: Icon(
-                                          Icons.lock,
-                                          color: Colors.redAccent,
-                                          size: 18,
+                                    Row(
+                                      children: [
+                                        Icon(
+                                          Icons.access_time_rounded,
+                                          size: 10,
+                                          color: isDark ? Colors.white38 : Colors.black38,
                                         ),
-                                      ),
+                                        const SizedBox(width: 4),
+                                        Text(
+                                          "${note.lastEdited.day}/${note.lastEdited.month}",
+                                          style: TextStyle(
+                                            fontSize: 10,
+                                            fontWeight: FontWeight.bold,
+                                            color: isDark ? Colors.white38 : Colors.black38,
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                    Row(
+                                      children: [
+                                        if (note.isPinned)
+                                          const Icon(Icons.push_pin_rounded, size: 14, color: Colors.orange),
+                                        if (note.isLocked)
+                                          const Padding(
+                                            padding: EdgeInsets.only(left: 4),
+                                            child: Icon(Icons.lock_rounded, size: 14, color: Colors.redAccent),
+                                          ),
+                                      ],
+                                    ),
                                   ],
                                 ),
-                                const SizedBox(height: 8),
-                                // 📌 Title
+                                const SizedBox(height: 12),
+
+                                // --- BODY: JUDUL ---
                                 Text(
                                   note.title,
                                   style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.w700,
-                                    color: isDark
-                                        ? Colors.white
-                                        : Colors.black87,
+                                    fontWeight: FontWeight.bold,
+                                    fontSize: 16,
+                                    color: isDark ? Colors.white : Colors.black87,
                                   ),
                                   maxLines: 1,
                                   overflow: TextOverflow.ellipsis,
                                 ),
-                                const SizedBox(height: 8),
-                                // 📄 Content
+                                const SizedBox(height: 6),
+
+                                // --- BODY: ISI CATATAN ---
                                 Expanded(
                                   child: Text(
-                                    note.isLocked ? "••••" : note.content,
-                                    maxLines: 6,
-                                    overflow: TextOverflow.ellipsis,
-                                    style: theme.textTheme.bodyMedium?.copyWith(
+                                    note.isLocked ? "Konten ini terkunci..." : note.content,
+                                    style: theme.textTheme.bodySmall?.copyWith(
                                       height: 1.4,
-                                      color: isDark
-                                          ? Colors.white70
-                                          : Colors.black87,
+                                      color: isDark ? Colors.white70 : Colors.black54,
                                     ),
+                                    maxLines: 4,
+                                    overflow: TextOverflow.ellipsis,
+                                  ),
+                                ),
+
+                                // --- FOOTER: DEKORASI ---
+                                Align(
+                                  alignment: Alignment.bottomRight,
+                                  child: Icon(
+                                    Icons.more_horiz,
+                                    size: 16,
+                                    color: isDark ? Colors.white24 : Colors.black12,
                                   ),
                                 ),
                               ],
@@ -930,48 +980,66 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
             Padding(
               padding: const EdgeInsets.all(16),
               child: TextField(
-                controller: _searchController,
-                onChanged: (value) => setState(() => _searchQuery = value),
-                decoration: InputDecoration(
-                  hintText: "Cari film/drama...",
-                  prefixIcon: const Icon(Icons.search),
-                  filled: true,
-                  fillColor: isDark
-                      ? Colors.grey[850]
-                      : theme.colorScheme.surfaceVariant,
-                  contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                  border: OutlineInputBorder(
-                    borderRadius: BorderRadius.circular(24),
-                    borderSide: BorderSide.none,
+                  controller: _searchController,
+                  onChanged: (value) => setState(() => _searchQuery = value),
+                  decoration: InputDecoration(
+                    hintText: "Cari film atau drama...",
+                    hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
+                    prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
+                    filled: true,
+                    fillColor: isDark ? Colors.grey[900] : Colors.grey[100],
+                    contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16), // Kotak melengkung modern
+                      borderSide: BorderSide.none,
+                    ),
+                    enabledBorder: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(16),
+                      borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05)),
+                    ),
                   ),
                 ),
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                  fontSize: 16,
-                ),
-              ),
             ),
 
             // 🎬 Film Notes Grid
             Expanded(
               child: filteredNotes.isEmpty
                   ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.movie_creation_outlined,
-                          size: 64,
-                          color: isDark ? Colors.white24 : Colors.black26,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          "Belum ada catatan film/drama",
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: isDark ? Colors.white60 : Colors.black54,
-                          ),
-                        ),
-                      ],
-                    )
+                            mainAxisAlignment: MainAxisAlignment.center,
+                            children: [
+                              Container(
+                                padding: const EdgeInsets.all(32),
+                                decoration: BoxDecoration(
+                                  color: theme.colorScheme.primary.withOpacity(0.05),
+                                  shape: BoxShape.circle,
+                                ),
+                                child: Icon(
+                                  Icons.movie_filter_rounded,
+                                  size: 80,
+                                  color: theme.colorScheme.primary.withOpacity(0.4),
+                                ),
+                              ),
+                              const SizedBox(height: 24),
+                              Text(
+                                "Belum ada koleksi film",
+                                style: theme.textTheme.titleLarge?.copyWith(
+                                  fontWeight: FontWeight.bold,
+                                  color: isDark ? Colors.white : Colors.black87,
+                                ),
+                              ),
+                              const SizedBox(height: 8),
+                              Padding(
+                                padding: const EdgeInsets.symmetric(horizontal: 40),
+                                child: Text(
+                                  "Catat film atau drama yang sedang kamu tonton agar tidak lupa progresnya!",
+                                  textAlign: TextAlign.center,
+                                  style: theme.textTheme.bodyMedium?.copyWith(
+                                    color: isDark ? Colors.white54 : Colors.black54,
+                                  ),
+                                ),
+                              ),
+                            ],
+                                              )
                   : GridView.builder(
                       padding: const EdgeInsets.symmetric(
                         horizontal: 16,
@@ -987,119 +1055,108 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                       itemCount: filteredNotes.length,
                       itemBuilder: (context, index) {
                         final note = filteredNotes[index];
-
                         return InkWell(
-                          borderRadius: BorderRadius.circular(16),
-                          onTap: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/detail_film_note',
-                              arguments: note.id,
-                            );
-                          },
+                          borderRadius: BorderRadius.circular(20),
+                          onTap: () => Navigator.pushNamed(context, '/detail_film_note', arguments: note.id),
                           onLongPress: () {
                             HapticFeedback.mediumImpact();
                             _showFilmNoteOptions(context, note);
                           },
-                          child: Container(
+                          child: AnimatedContainer(
+                            duration: const Duration(milliseconds: 200),
                             decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(16),
+                              borderRadius: BorderRadius.circular(20),
                               color: note.isFinished
-                                  ? (isDark
-                                        ? Colors.green[900]
-                                        : Colors.green[50])
-                                  : (isDark
-                                        ? theme.colorScheme.surfaceVariant
-                                              .withOpacity(0.6)
-                                        : theme.colorScheme.surface),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: isDark
-                                      ? Colors.black.withOpacity(0.3)
-                                      : Colors.grey.withOpacity(0.15),
-                                  blurRadius: 8,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
+                                  ? (isDark ? Colors.green.withOpacity(0.15) : Colors.green[50])
+                                  : (isDark ? theme.colorScheme.surfaceVariant.withOpacity(0.4) : Colors.white),
+                              border: Border.all(
+                                color: note.isFinished 
+                                    ? Colors.green.withOpacity(0.3) 
+                                    : (isDark ? Colors.white10 : Colors.grey.withOpacity(0.2)),
+                                width: 1,
+                              ),
                             ),
-                            child: Padding(
-                              padding: const EdgeInsets.all(12),
-                              child: Column(
-                                crossAxisAlignment: CrossAxisAlignment.start,
+                            child: ClipRRect(
+                              borderRadius: BorderRadius.circular(20),
+                              child: Stack(
                                 children: [
-                                  // 📌 Pinned icon
-                                  Row(
-                                    mainAxisAlignment: MainAxisAlignment.end,
-                                    children: [
-                                      if (note.isPinned)
-                                        const Icon(
-                                          Icons.push_pin,
-                                          color: Colors.amber,
-                                          size: 18,
+                                  Padding(
+                                    padding: const EdgeInsets.all(16),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        // Title
+                                        Text(
+                                          note.title,
+                                          style: theme.textTheme.titleMedium?.copyWith(
+                                            fontWeight: FontWeight.bold,
+                                            letterSpacing: -0.5,
+                                            color: isDark ? Colors.white : Colors.black87,
+                                          ),
+                                          maxLines: 2,
+                                          overflow: TextOverflow.ellipsis,
                                         ),
-                                    ],
-                                  ),
-                                  const SizedBox(height: 4),
-
-                                  // 🎬 Title
-                                  Text(
-                                    note.title,
-                                    style: theme.textTheme.titleMedium
-                                        ?.copyWith(
-                                          fontWeight: FontWeight.w700,
-                                          fontSize: 16,
-                                          color: isDark
-                                              ? Colors.white
-                                              : Colors.black87,
+                                        const SizedBox(height: 6),
+                                        // Year Chip-like text
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                          decoration: BoxDecoration(
+                                            color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+                                            borderRadius: BorderRadius.circular(8),
+                                          ),
+                                          child: Text(
+                                            "${note.year}",
+                                            style: theme.textTheme.labelSmall?.copyWith(
+                                              fontWeight: FontWeight.w600,
+                                              color: isDark ? Colors.white70 : Colors.black54,
+                                            ),
+                                          ),
                                         ),
-                                    maxLines: 2,
-                                    overflow: TextOverflow.ellipsis,
-                                  ),
-                                  const SizedBox(height: 8),
-
-                                  // 📊 Progress
-                                  Text(
-                                    "Tahun: ${note.year}",
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: isDark
-                                          ? Colors.white70
-                                          : Colors.black54,
+                                        const Spacer(),
+                                        // Episode Progress Text
+                                        Row(
+                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          children: [
+                                            Text(
+                                              "Eps: ${note.episodeWatched}/${note.totalEpisodes ?? '?'}",
+                                              style: theme.textTheme.bodySmall?.copyWith(
+                                                fontWeight: FontWeight.w500,
+                                                color: isDark ? Colors.white60 : Colors.black45,
+                                              ),
+                                            ),
+                                            if (note.isFinished)
+                                              const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
+                                          ],
+                                        ),
+                                        const SizedBox(height: 8),
+                                        // Modern Progress Bar
+                                        if (!note.isFinished)
+                                          ClipRRect(
+                                            borderRadius: BorderRadius.circular(10),
+                                            child: LinearProgressIndicator(
+                                              value: (note.totalEpisodes != null && note.totalEpisodes! > 0)
+                                                  ? note.episodeWatched / note.totalEpisodes!
+                                                  : 0,
+                                              backgroundColor: isDark ? Colors.white10 : Colors.grey[200],
+                                              color: theme.colorScheme.primary,
+                                              minHeight: 6,
+                                            ),
+                                          ),
+                                      ],
                                     ),
                                   ),
-                                  Text(
-                                    "Episode: ${note.episodeWatched}",
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      color: isDark
-                                          ? Colors.white70
-                                          : Colors.black54,
-                                    ),
-                                  ),
-                                  const Spacer(),
-
-                                  // Status bar
-                                  if (!note.isFinished)
-                                    LinearProgressIndicator(
-                                      value:
-                                          (note.totalEpisodes != null &&
-                                              note.totalEpisodes! > 0)
-                                          ? note.episodeWatched /
-                                                note.totalEpisodes!
-                                          : 0,
-                                      backgroundColor: isDark
-                                          ? Colors.white10
-                                          : Colors.grey[200],
-                                      color: Colors.blueAccent,
-                                      minHeight: 4,
-                                      borderRadius: BorderRadius.circular(8),
-                                    ),
-
-                                  if (note.isFinished)
-                                    const Align(
-                                      alignment: Alignment.bottomRight,
-                                      child: Icon(
-                                        Icons.check_circle,
-                                        color: Colors.green,
-                                        size: 20,
+                                  // Pin Indicator (Positioned)
+                                  if (note.isPinned)
+                                    Positioned(
+                                      top: 0,
+                                      right: 0,
+                                      child: Container(
+                                        padding: const EdgeInsets.all(4),
+                                        decoration: BoxDecoration(
+                                          color: Colors.amber.withOpacity(0.2),
+                                          borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(12)),
+                                        ),
+                                        child: const Icon(Icons.push_pin_rounded, color: Colors.amber, size: 14),
                                       ),
                                     ),
                                 ],
@@ -1152,7 +1209,6 @@ class MaintenanceScreen extends StatelessWidget {
     );
   }
 }
-
 class BannerWidget extends StatelessWidget {
   final String message;
   final String url;
@@ -1171,117 +1227,178 @@ class BannerWidget extends StatelessWidget {
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
 
+    // Parsing changelog menjadi list
     final changelogItems = changelog
         .split("\n")
         .where((e) => e.trim().isNotEmpty)
         .toList();
 
     return Positioned(
-      top: 60,
+      top: MediaQuery.of(context).padding.top + 10,
       left: 16,
       right: 16,
       child: Material(
-        elevation: 8,
-        borderRadius: BorderRadius.circular(20),
-        color: theme.colorScheme.surface,
+        color: Colors.transparent,
         child: Container(
-          padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
-            borderRadius: BorderRadius.circular(20),
-            border: Border(
-              left: BorderSide(color: theme.colorScheme.primary, width: 5),
-            ),
+            color: theme.colorScheme.surface.withOpacity(0.9), // Glassmorphism effect
+            borderRadius: BorderRadius.circular(28),
+            border: Border.all(color: theme.colorScheme.primary.withOpacity(0.2)),
+            boxShadow: [
+              BoxShadow(
+                color: Colors.black.withOpacity(0.08),
+                blurRadius: 25,
+                offset: const Offset(0, 12),
+              ),
+            ],
           ),
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              // 🔹 Header
-              Row(
-                children: [
-                  CircleAvatar(
-                    radius: 16,
-                    backgroundColor: theme.colorScheme.primary.withOpacity(0.1),
-                    child: Icon(
-                      Icons.system_update_alt_rounded,
-                      size: 18,
-                      color: theme.colorScheme.primary,
-                    ),
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(28),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                // Bagian Header
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 20, 12, 0),
+                  child: Row(
+                    children: [
+                      // Animated-like Icon Container
+                      Container(
+                        padding: const EdgeInsets.all(10),
+                        decoration: BoxDecoration(
+                          gradient: LinearGradient(
+                            colors: [theme.colorScheme.primary, theme.colorScheme.secondary],
+                            begin: Alignment.topLeft,
+                            end: Alignment.bottomRight,
+                          ),
+                          borderRadius: BorderRadius.circular(16),
+                          boxShadow: [
+                            BoxShadow(
+                              color: theme.colorScheme.primary.withOpacity(0.3),
+                              blurRadius: 10,
+                              offset: const Offset(0, 4),
+                            )
+                          ],
+                        ),
+                        child: const Icon(Icons.auto_awesome_rounded, color: Colors.white, size: 22),
+                      ),
+                      const SizedBox(width: 16),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              message,
+                              style: theme.textTheme.titleMedium?.copyWith(
+                                fontWeight: FontWeight.bold,
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                            Text(
+                              "Pembaruan sistem tersedia",
+                              style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey[600]),
+                            ),
+                          ],
+                        ),
+                      ),
+                      IconButton(
+                        onPressed: onClose,
+                        icon: Icon(Icons.close_rounded, color: Colors.grey[400], size: 20),
+                      ),
+                    ],
                   ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Text(
-                      message,
-                      style: theme.textTheme.titleMedium?.copyWith(
-                        fontWeight: FontWeight.w600,
+                ),
+
+                // Changelog Section
+                if (changelogItems.isNotEmpty)
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+                    child: Container(
+                      width: double.infinity,
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: theme.colorScheme.primary.withOpacity(0.05),
+                        borderRadius: BorderRadius.circular(20),
+                      ),
+                      child: ConstrainedBox(
+                        constraints: const BoxConstraints(maxHeight: 80),
+                        child: ListView.builder(
+                          padding: EdgeInsets.zero,
+                          shrinkWrap: true,
+                          itemCount: changelogItems.length,
+                          itemBuilder: (context, index) {
+                            return Padding(
+                              padding: const EdgeInsets.only(bottom: 4),
+                              child: Row(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text("• ", style: TextStyle(color: theme.colorScheme.primary, fontWeight: FontWeight.bold)),
+                                  Expanded(
+                                    child: Text(
+                                      changelogItems[index],
+                                      style: theme.textTheme.bodySmall?.copyWith(
+                                        color: Colors.black87,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                              ),
+                            );
+                          },
+                        ),
                       ),
                     ),
                   ),
-                ],
-              ),
 
-              const SizedBox(height: 12),
-
-              // 📜 Changelog scrollable
-              SizedBox(
-                height: 120,
-                child: Scrollbar(
-                  thumbVisibility: true,
-                  radius: const Radius.circular(8),
-                  child: ListView.separated(
-                    itemCount: changelogItems.length,
-                    itemBuilder: (context, index) {
-                      return Row(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text("• "),
-                          Expanded(
-                            child: Text(
-                              changelogItems[index],
-                              style: theme.textTheme.bodyMedium,
-                            ),
+                // Action Buttons
+                Padding(
+                  padding: const EdgeInsets.fromLTRB(20, 0, 20, 20),
+                  child: Row(
+                    children: [
+                      Expanded(
+                        child: TextButton(
+                          onPressed: onClose,
+                          style: TextButton.styleFrom(
+                            foregroundColor: Colors.grey[600],
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
                           ),
-                        ],
-                      );
-                    },
-                    separatorBuilder: (_, __) => const SizedBox(height: 4),
+                          child: const Text("Nanti Saja"),
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        flex: 2,
+                        child: ElevatedButton(
+                          style: ElevatedButton.styleFrom(
+                            elevation: 0,
+                            backgroundColor: theme.colorScheme.primary,
+                            foregroundColor: theme.colorScheme.onPrimary,
+                            padding: const EdgeInsets.symmetric(vertical: 14),
+                            shape: RoundedRectangleBorder(
+                              borderRadius: BorderRadius.circular(14),
+                            ),
+                          ).copyWith(
+                            // Efek shadow saat ditekan
+                            elevation: WidgetStateProperty.resolveWith((states) => states.contains(WidgetState.pressed) ? 0 : 4),
+                          ),
+                          onPressed: () async {
+                            final Uri _url = Uri.parse(url);
+                            if (await canLaunchUrl(_url)) {
+                              await launchUrl(_url, mode: LaunchMode.externalApplication);
+                            }
+                          },
+                          child: const Text(
+                            "Update Sekarang",
+                            style: TextStyle(fontWeight: FontWeight.bold),
+                          ),
+                        ),
+                      ),
+                    ],
                   ),
                 ),
-              ),
-
-              const SizedBox(height: 16),
-
-              // 🔘 Buttons
-              Row(
-                mainAxisAlignment: MainAxisAlignment.end,
-                children: [
-                  OutlinedButton(
-                    onPressed: onClose,
-                    child: const Text("Tutup"),
-                  ),
-                  const SizedBox(width: 12),
-                  FilledButton.icon(
-                    onPressed: () async {
-                      final uri = Uri.parse(url);
-                      if (await canLaunchUrl(uri)) {
-                        await launchUrl(
-                          uri,
-                          mode: LaunchMode.externalApplication,
-                        );
-                      } else {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(
-                            content: Text('Gagal membuka link update'),
-                          ),
-                        );
-                      }
-                    },
-                    icon: const Icon(Icons.open_in_new, size: 18),
-                    label: const Text("Update"),
-                  ),
-                ],
-              ),
-            ],
+              ],
+            ),
           ),
         ),
       ),

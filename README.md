@@ -28,7 +28,7 @@ Aplikasi catatan pribadi dan film/drama yang modern, ringan, dan praktis. Dibuat
 ---
 
 ## 📦 APK Release
-[📥 Download APK v1.0.6 (Link)](https://catkoo.github.io/MyNotePlus_Flutter)
+[📥 Download APK v1.0.7 (Link)](https://catkoo.github.io/MyNotePlus_Flutter)
 
 > ⚠️ **Perhatian:**
 > - APK ini dapat berubah setiap kali ada pembaruan fitur atau perbaikan bug.

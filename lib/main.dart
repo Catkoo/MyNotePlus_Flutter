@@ -37,19 +37,52 @@ Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
 }
 
 void main() async {
+  // 1. Inisialisasi Dasar (Harus Cepat)
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(options: DefaultFirebaseOptions.currentPlatform);
 
-  // ⏰ Init timezone
+  // ⏰ Init timezone & Notifikasi
   tz.initializeTimeZones();
-
-  // 🔔 Init notifikasi lokal
   await initializeNotifications();
 
   // 🔔 Init handler background FCM
   FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
 
   // ✅ Listener pesan FCM saat foreground
+  setupForegroundNotificationListener();
+
+  // ✅ Load tema awal
+  final isDarkMode = await ThemeProvider.loadInitialTheme();
+
+  // 🚀 JALANKAN APP TERLEBIH DAHULU (Agar tidak blank hitam)
+  runApp(MyNotePlusApp(isDarkMode: isDarkMode));
+
+  // 🆕 Jalankan Auto-backup SETELAH runApp (Tanpa 'await')
+  // Ini akan berjalan di latar belakang tanpa mengganggu kemunculan UI
+  _performAutoBackup();
+}
+
+/// Fungsi pembantu untuk memisahkan logika backup dari alur utama startup
+Future<void> _performAutoBackup() async {
+  try {
+    final googleUser = await GoogleDriveService().googleSignIn.signInSilently();
+    if (googleUser != null) {
+      final file = await BackupService().exportDataToJson();
+      await GoogleDriveService().uploadJsonBackup(
+        file,
+        "mynoteplus_backup.json",
+      );
+      debugPrint("✅ Auto-backup sukses di background");
+    } else {
+      debugPrint("ℹ️ Auto-backup dilewati: user belum login Google");
+    }
+  } catch (e) {
+    debugPrint("❌ Auto-backup gagal: $e");
+  }
+}
+
+/// Fungsi pembantu untuk merapikan listener notifikasi
+void setupForegroundNotificationListener() {
   FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
     if (message.notification != null) {
       final title = message.notification!.title ?? '';
@@ -70,46 +103,22 @@ void main() async {
         ),
       );
 
-      // Simpan ke Firestore
-      final usersSnapshot = await FirebaseFirestore.instance
-          .collection('users')
-          .get();
+      // Simpan ke Firestore (Hanya jika kamu benar-benar butuh simpan di semua user)
+      final usersSnapshot = await FirebaseFirestore.instance.collection('users').get();
       for (var userDoc in usersSnapshot.docs) {
-        await FirebaseFirestore.instance
+        FirebaseFirestore.instance
             .collection('users')
             .doc(userDoc.id)
             .collection('notifications')
             .add({
-              'title': title,
-              'message': body,
-              'timestamp': FieldValue.serverTimestamp(),
-              'isRead': false,
-            });
+          'title': title,
+          'message': body,
+          'timestamp': FieldValue.serverTimestamp(),
+          'isRead': false,
+        });
       }
     }
   });
-
-  // ✅ Load tema awal
-  final isDarkMode = await ThemeProvider.loadInitialTheme();
-
-  // 🆕 Auto-backup saat startup (jika sudah login Google)
-  try {
-    final googleUser = await GoogleDriveService().googleSignIn.signInSilently();
-    if (googleUser != null) {
-      final file = await BackupService().exportDataToJson();
-      await GoogleDriveService().uploadJsonBackup(
-        file,
-        "mynoteplus_backup.json",
-      );
-      debugPrint("✅ Auto-backup sukses saat startup");
-    } else {
-      debugPrint("ℹ️ Auto-backup dilewati: user belum login Google");
-    }
-  } catch (e) {
-    debugPrint("❌ Auto-backup gagal: $e");
-  }
-
-  runApp(MyNotePlusApp(isDarkMode: isDarkMode));
 }
 
 class MyNotePlusApp extends StatelessWidget {
@@ -129,9 +138,7 @@ class MyNotePlusApp extends StatelessWidget {
           return MaterialApp(
             title: 'MyNotePlus',
             debugShowCheckedModeBanner: false,
-            themeMode: themeProvider.isDarkMode
-                ? ThemeMode.dark
-                : ThemeMode.light,
+            themeMode: themeProvider.isDarkMode ? ThemeMode.dark : ThemeMode.light,
             theme: ThemeData(
               useMaterial3: true,
               brightness: Brightness.light,
@@ -166,34 +173,25 @@ class MyNotePlusApp extends StatelessWidget {
               switch (settings.name) {
                 case '/edit_note':
                   if (args is String) {
-                    return MaterialPageRoute(
-                      builder: (_) => EditNoteScreen(noteId: args),
-                    );
+                    return MaterialPageRoute(builder: (_) => EditNoteScreen(noteId: args));
                   }
                   break;
                 case '/detail_note':
                   if (args is String) {
-                    return MaterialPageRoute(
-                      builder: (_) => DetailNoteScreen(noteId: args),
-                    );
+                    return MaterialPageRoute(builder: (_) => DetailNoteScreen(noteId: args));
                   }
                   break;
                 case '/edit_film_note':
                   if (args is String) {
-                    return MaterialPageRoute(
-                      builder: (_) => EditFilmNoteScreen(filmId: args),
-                    );
+                    return MaterialPageRoute(builder: (_) => EditFilmNoteScreen(filmId: args));
                   }
                   break;
                 case '/detail_film_note':
                   if (args is String) {
-                    return MaterialPageRoute(
-                      builder: (_) => DetailFilmNoteScreen(filmId: args),
-                    );
+                    return MaterialPageRoute(builder: (_) => DetailFilmNoteScreen(filmId: args));
                   }
                   break;
               }
-
               return MaterialPageRoute(
                 builder: (_) => const Scaffold(
                   body: Center(child: Text("404 - Halaman tidak ditemukan")),

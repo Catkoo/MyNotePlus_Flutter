@@ -3,144 +3,172 @@ import 'package:flutter/material.dart';
 class PrivacyPolicyScreen extends StatelessWidget {
   const PrivacyPolicyScreen({super.key});
 
-  Widget _buildSectionTitle(BuildContext context, String title) {
-    return Padding(
-      padding: const EdgeInsets.only(top: 32, bottom: 12),
-      child: Text(
-        title,
-        style: TextStyle(
-          fontSize: 22,
-          fontWeight: FontWeight.w700,
-          color: Theme.of(context).colorScheme.primary,
-          letterSpacing: 0.5,
-        ),
-      ),
-    );
-  }
-
-  Widget _buildSectionContent(BuildContext context, String content) {
-    return Text(
-      content,
-      style: TextStyle(
-        fontSize: 16,
-        height: 1.7,
-        color: Theme.of(context).textTheme.bodyMedium?.color,
-        letterSpacing: 0.3,
-      ),
-      textAlign: TextAlign.justify,
-    );
-  }
-
   @override
   Widget build(BuildContext context) {
-    final textColor = Theme.of(context).textTheme.bodyMedium?.color;
+    final theme = Theme.of(context);
+    final colorScheme = theme.colorScheme;
+    final isDark = theme.brightness == Brightness.dark;
 
     return Scaffold(
+      backgroundColor: isDark ? colorScheme.surface : const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text('Kebijakan Privasi'),
-        backgroundColor: Theme.of(context).colorScheme.primary,
+        title: const Text('Kebijakan Privasi', 
+          style: TextStyle(fontWeight: FontWeight.bold, fontSize: 18)
+        ),
         centerTitle: true,
-        elevation: 2,
+        elevation: 0,
+        backgroundColor: Colors.transparent,
       ),
       body: SingleChildScrollView(
-        padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 24),
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            _buildSectionTitle(context, 'Pendahuluan'),
-            _buildSectionContent(
-              context,
-              'Kami sangat menghargai kepercayaan Anda dalam menggunakan aplikasi ini. '
-              'Kebijakan Privasi ini menjelaskan bagaimana kami mengumpulkan, menggunakan, '
-              'menyimpan, dan melindungi data pribadi yang Anda berikan ketika menggunakan '
-              'layanan kami. Dengan menggunakan aplikasi, Anda dianggap telah membaca, memahami, '
-              'dan menyetujui isi dari Kebijakan Privasi ini.',
-            ),
+            // Header Section
+            _buildHeader(colorScheme),
+            const SizedBox(height: 32),
 
-            _buildSectionTitle(context, 'Data yang Dikumpulkan'),
-            _buildSectionContent(
-              context,
-              'Untuk mendukung fungsionalitas aplikasi, kami dapat mengumpulkan beberapa jenis data, '
-              'antara lain:\n\n'
-              '- Informasi akun seperti nama, email, atau foto profil (jika tersedia).\n'
-              '- Catatan pribadi, termasuk judul, isi catatan, dan pengingat yang Anda simpan.\n'
-              '- Data film/drama, termasuk judul, tahun rilis, dan status tontonan terakhir.\n'
-              '- Data teknis seperti perangkat, sistem operasi, dan log aktivitas untuk keperluan diagnostik.',
-            ),
-
-            _buildSectionTitle(context, 'Tujuan Penggunaan Data'),
-            _buildSectionContent(
-              context,
-              'Data yang kami kumpulkan digunakan untuk tujuan berikut:\n\n'
-              '1. Menyediakan dan memelihara layanan utama aplikasi.\n'
-              '2. Menyimpan dan mengelola catatan pribadi serta daftar film/drama Anda.\n'
-              '3. Memproses autentikasi dan otorisasi agar akun Anda aman.\n'
-              '4. Memberikan pengalaman pengguna yang lebih baik dengan rekomendasi atau fitur baru.\n'
-              '5. Melakukan analisis internal untuk meningkatkan performa aplikasi.\n'
-              '6. Mematuhi kewajiban hukum yang berlaku.',
-            ),
-
-            _buildSectionTitle(context, 'Keamanan Data'),
-            _buildSectionContent(
-              context,
-              'Kami menerapkan langkah-langkah keamanan yang wajar untuk melindungi data Anda dari akses, '
-              'penggunaan, atau pengungkapan yang tidak sah. Meski demikian, perlu diingat bahwa tidak ada '
-              'metode transmisi data melalui internet atau metode penyimpanan elektronik yang sepenuhnya aman. '
-              'Kami tidak dapat menjamin keamanan absolut, tetapi berkomitmen untuk selalu meningkatkan proteksi.',
-            ),
-
-            _buildSectionTitle(context, 'Pengungkapan dan Pembagian Data'),
-            _buildSectionContent(
-              context,
-              'Kami tidak akan membagikan atau menjual data pribadi Anda kepada pihak ketiga untuk tujuan komersial. '
-              'Namun, kami dapat mengungkapkan data Anda dalam keadaan berikut:\n\n'
-              '- Jika diwajibkan oleh hukum atau perintah pengadilan.\n'
-              '- Jika diperlukan untuk melindungi hak, keamanan, atau properti kami maupun pengguna lain.\n'
-              '- Dalam hal terjadi penggabungan, akuisisi, atau penjualan aset perusahaan, data dapat menjadi bagian dari transaksi.',
-            ),
-
-            _buildSectionTitle(context, 'Hak dan Pilihan Anda'),
-            _buildSectionContent(
-              context,
-              'Anda memiliki hak penuh atas data pribadi Anda, termasuk:\n\n'
-              '- Hak untuk mengakses dan meninjau data yang tersimpan.\n'
-              '- Hak untuk memperbarui atau memperbaiki informasi yang tidak akurat.\n'
-              '- Hak untuk menghapus akun dan seluruh data yang terkait.\n'
-              '- Hak untuk menolak pengumpulan data tertentu (yang tidak wajib) kapan saja.',
-            ),
-
-            _buildSectionTitle(context, 'Perubahan pada Kebijakan Privasi'),
-            _buildSectionContent(
-              context,
-              'Kami dapat memperbarui Kebijakan Privasi ini dari waktu ke waktu. Setiap perubahan akan diberitahukan '
-              'melalui pembaruan di aplikasi atau notifikasi lain yang sesuai. Kami mendorong Anda untuk meninjau '
-              'halaman ini secara berkala agar tetap mengetahui bagaimana kami melindungi data Anda.',
-            ),
-
-            _buildSectionTitle(context, 'Kontak Kami'),
-            _buildSectionContent(
-              context,
-              'Jika Anda memiliki pertanyaan, saran, atau permintaan terkait kebijakan privasi ini, '
-              'silakan hubungi tim kami melalui email resmi yang tersedia di bagian pengaturan aplikasi. '
-              'Kami berkomitmen untuk merespons setiap permintaan dengan segera.',
-            ),
-
-            const SizedBox(height: 48),
-            Center(
-              child: Text(
-                'Terima kasih telah mempercayakan catatan dan data tontonan Anda kepada kami 🙏',
-                style: TextStyle(
-                  fontSize: 14,
-                  fontStyle: FontStyle.italic,
-                  color: textColor?.withOpacity(0.7),
-                  letterSpacing: 0.3,
-                ),
-                textAlign: TextAlign.center,
+            // Main Content Card
+            Container(
+              decoration: BoxDecoration(
+                color: theme.cardColor,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  BoxShadow(
+                    color: Colors.black.withValues(alpha: 0.05),
+                    blurRadius: 20,
+                    offset: const Offset(0, 10),
+                  )
+                ],
+              ),
+              child: Column(
+                children: [
+                  _buildPolicySection(
+                    context,
+                    icon: Icons.shield_outlined,
+                    title: 'Pendahuluan',
+                    content: 'Kami menghargai kepercayaan Anda. Kebijakan ini menjelaskan bagaimana kami mengelola data pribadi Anda saat menggunakan layanan kami.',
+                  ),
+                  _buildPolicySection(
+                    context,
+                    icon: Icons.storage_rounded,
+                    title: 'Data yang Dikumpulkan',
+                    content: '• Informasi akun (Nama, Email, Foto)\n• Catatan pribadi & Pengingat\n• Daftar film & status tontonan\n• Data teknis perangkat',
+                  ),
+                  _buildPolicySection(
+                    context,
+                    icon: Icons.insights_rounded,
+                    title: 'Tujuan Penggunaan',
+                    content: 'Data digunakan untuk sinkronisasi akun, manajemen catatan, keamanan autentikasi, dan peningkatan performa aplikasi secara berkala.',
+                  ),
+                  _buildPolicySection(
+                    context,
+                    icon: Icons.lock_outline_rounded,
+                    title: 'Keamanan Data',
+                    content: 'Kami menggunakan enkripsi dan standar keamanan modern untuk melindungi data Anda, meskipun tidak ada metode internet yang 100% aman.',
+                  ),
+                  _buildPolicySection(
+                    context,
+                    icon: Icons.person_search_outlined,
+                    title: 'Hak & Pilihan Anda',
+                    content: 'Anda berhak mengakses, memperbarui, atau menghapus seluruh data Anda kapan saja melalui pengaturan akun di aplikasi ini.',
+                    isLast: true,
+                  ),
+                ],
               ),
             ),
-            const SizedBox(height: 24),
+
+            const SizedBox(height: 40),
+            
+            // Footer message
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Text(
+                'Terima kasih telah mempercayakan catatan dan data tontonan Anda kepada kami 🙏',
+                textAlign: TextAlign.center,
+                style: theme.textTheme.bodySmall?.copyWith(
+                  fontStyle: FontStyle.italic,
+                  color: colorScheme.onSurface.withValues(alpha: 0.6),
+                ),
+              ),
+            ),
+            const SizedBox(height: 32),
           ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildHeader(ColorScheme colorScheme) {
+    return Column(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(20),
+          decoration: BoxDecoration(
+            color: colorScheme.primary.withValues(alpha: 0.1),
+            shape: BoxShape.circle,
+          ),
+          child: Icon(Icons.privacy_tip_rounded, size: 50, color: colorScheme.primary),
+        ),
+        const SizedBox(height: 16),
+        const Text(
+          "Privasi Anda adalah Prioritas",
+          style: TextStyle(fontSize: 18, fontWeight: FontWeight.bold),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          "Versi Terbaru: Maret 2026",
+          style: TextStyle(fontSize: 12, color: colorScheme.outline),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildPolicySection(
+    BuildContext context, {
+    required IconData icon,
+    required String title,
+    required String content,
+    bool isLast = false,
+  }) {
+    final theme = Theme.of(context);
+    
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        border: isLast 
+            ? null 
+            : Border(bottom: BorderSide(color: theme.dividerColor.withValues(alpha: 0.5))),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(8),
+                decoration: BoxDecoration(
+                  color: theme.colorScheme.secondary.withValues(alpha: 0.1),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+                child: Icon(icon, size: 20, color: theme.colorScheme.secondary),
+              ),
+              const SizedBox(width: 12),
+              Text(
+                title,
+                style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            content,
+            style: theme.textTheme.bodyMedium?.copyWith(
+              height: 1.5,
+              color: theme.colorScheme.onSurface.withValues(alpha: 0.7),
+            ),
+          ),
+        ],
       ),
     );
   }

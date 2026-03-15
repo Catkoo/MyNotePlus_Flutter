@@ -74,15 +74,16 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
       );
       viewModel.updateNote(updatedNote);
       Navigator.pop(context, true);
-      ScaffoldMessenger.of(
-        context,
-      ).showSnackBar(const SnackBar(content: Text("Catatan diperbarui ✅")));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Catatan diperbarui ✅")),
+      );
     }
   }
 
   @override
   Widget build(BuildContext context) {
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
     if (isLoading) {
       return const Scaffold(body: Center(child: CircularProgressIndicator()));
@@ -94,115 +95,119 @@ class _EditNoteScreenState extends State<EditNoteScreen> {
       );
     }
 
-    return WillPopScope(
-      onWillPop: _onWillPop,
+    return PopScope(
+      canPop: false,
+      onPopInvokedWithResult: (didPop, result) async {
+        if (didPop) return;
+        final canPop = await _onWillPop();
+        if (canPop && context.mounted) {
+          Navigator.pop(context);
+        }
+      },
       child: Scaffold(
-        backgroundColor: theme.colorScheme.background,
-        body: SafeArea(
-          child: Padding(
-            padding: const EdgeInsets.all(20),
-            child: SingleChildScrollView(
-              physics: const BouncingScrollPhysics(),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Header custom
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      IconButton(
-                        icon: Icon(
-                          Icons.arrow_back,
-                          color: theme.colorScheme.onBackground,
-                        ),
-                        onPressed: () async {
-                          final canPop = await _onWillPop();
-                          if (canPop && mounted) {
-                            Navigator.pop(context);
-                          }
-                        },
-                      ),
-                      Text(
-                        "Edit Catatan",
-                        style: theme.textTheme.titleMedium?.copyWith(
-                          fontWeight: FontWeight.bold,
-                          color: theme.colorScheme.onBackground,
-                        ),
-                      ),
-                      const SizedBox(width: 48),
-                    ],
-                  ),
-                  const SizedBox(height: 20),
-
-                  // Card input
-                  Container(
-                    width: double.infinity,
-                    padding: const EdgeInsets.all(20),
-                    decoration: BoxDecoration(
-                      color: theme.colorScheme.surface,
-                      borderRadius: BorderRadius.circular(20),
-                      boxShadow: [
-                        BoxShadow(
-                          color: theme.shadowColor.withOpacity(0.05),
-                          blurRadius: 10,
-                          offset: const Offset(0, 4),
-                        ),
-                      ],
-                    ),
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        TextField(
-                          controller: titleController,
-                          style: theme.textTheme.headlineSmall?.copyWith(
-                            fontWeight: FontWeight.bold,
-                          ),
-                          decoration: const InputDecoration(
-                            hintText: "Judul catatan...",
-                            border: InputBorder.none,
-                          ),
-                        ),
-                        const Divider(),
-                        TextField(
-                          controller: contentController,
-                          maxLines: null,
-                          keyboardType: TextInputType.multiline,
-                          style: theme.textTheme.bodyMedium?.copyWith(
-                            height: 1.5,
-                          ),
-                          decoration: const InputDecoration(
-                            hintText: "Tulis sesuatu di sini ✨...",
-                            border: InputBorder.none,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 30),
-
-                  // Tombol simpan
-                  SizedBox(
-                    width: double.infinity,
-                    child: FilledButton.icon(
-                      icon: const Icon(Icons.save),
-                      label: const Text(
-                        "Simpan Perubahan",
-                        style: TextStyle(fontWeight: FontWeight.bold),
-                      ),
-                      style: FilledButton.styleFrom(
-                        padding: const EdgeInsets.symmetric(vertical: 16),
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                      ),
-                      onPressed: _saveNote,
-                    ),
-                  ),
-                ],
-              ),
+        backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF8F9FA),
+        appBar: AppBar(
+          elevation: 0,
+          backgroundColor: Colors.transparent,
+          leading: IconButton(
+            icon: Icon(Icons.close_rounded, color: isDark ? Colors.white : Colors.black87),
+            onPressed: () async {
+              final canPop = await _onWillPop();
+              if (canPop && mounted) Navigator.pop(context);
+            },
+          ),
+          title: Text(
+            "Edit Catatan",
+            style: theme.textTheme.titleMedium?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
             ),
           ),
+          centerTitle: true,
+          actions: [
+            TextButton(
+              onPressed: _saveNote,
+              child: Text(
+                "Simpan",
+                style: TextStyle(
+                  color: theme.colorScheme.primary,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            const SizedBox(width: 8),
+          ],
+        ),
+        body: Column(
+          children: [
+            Expanded(
+              child: SingleChildScrollView(
+                physics: const BouncingScrollPhysics(),
+                padding: const EdgeInsets.symmetric(horizontal: 24),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const SizedBox(height: 10),
+                    TextField(
+                      controller: titleController,
+                      style: theme.textTheme.headlineSmall?.copyWith(
+                        fontWeight: FontWeight.bold,
+                        color: isDark ? Colors.white : Colors.black87,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: "Judul catatan...",
+                        border: InputBorder.none,
+                        contentPadding: EdgeInsets.zero,
+                      ),
+                    ),
+                    Container(
+                      margin: const EdgeInsets.symmetric(vertical: 16),
+                      height: 1.5,
+                      width: double.infinity,
+                      decoration: BoxDecoration(
+                        gradient: LinearGradient(
+                          colors: [
+                            theme.colorScheme.primary.withValues(alpha: 0.5),
+                            theme.colorScheme.primary.withValues(alpha: 0.01),
+                          ],
+                        ),
+                      ),
+                    ),
+                    TextField(
+                      controller: contentController,
+                      maxLines: null,
+                      keyboardType: TextInputType.multiline,
+                      style: theme.textTheme.bodyLarge?.copyWith(
+                        height: 1.6,
+                        fontSize: 17,
+                        color: isDark ? Colors.white.withValues(alpha: 0.8) : Colors.black87,
+                      ),
+                      decoration: const InputDecoration(
+                        hintText: "Tulis ceritamu di sini ✨...",
+                        border: InputBorder.none,
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+            Padding(
+              padding: const EdgeInsets.all(24),
+              child: Container(
+                width: double.infinity,
+                decoration: BoxDecoration(
+                  borderRadius: BorderRadius.circular(20),
+                  boxShadow: [
+                    BoxShadow(
+                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    ),
+                  ],
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );

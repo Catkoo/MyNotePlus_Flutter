@@ -46,22 +46,37 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
   void shareNote() {
     if (filmNote == null) return;
     final note = filmNote!;
-    final shareText =
-        '''
-🎬 ${note.title}
-Tahun: ${note.year}
-Episode terakhir: ${note.episodeWatched}${note.totalEpisodes != null ? " / ${note.totalEpisodes}" : ""}
+    final shareText = '''
+🎬 ${note.title} (${note.year})
+📌 Media: ${note.media ?? "-"}
+📺 Episode: ${note.episodeWatched}${note.totalEpisodes != null ? " / ${note.totalEpisodes}" : ""}
 Status: ${note.isFinished ? "✅ Selesai" : "⏳ Belum selesai"}
-${note.overallRating != null ? "Rating: ${note.overallRating!.toStringAsFixed(1)}/5" : ""}
-${note.mustRewatch != null ? (note.mustRewatch! ? "🔄 Wajib ditonton ulang" : "❌ Tidak wajib rewatch") : ""}
-
-📅 Terakhir diubah: ${formatSimpleDate(note.lastEdited)}
-${note.nextEpisodeDate != null ? "📢 Tayang berikutnya: ${formatSimpleDate(note.nextEpisodeDate!)}" : ""}
-
-Catatan dibuat di MyNotePlus 📱
+${note.overallRating != null ? "⭐ Rating: ${note.overallRating!.toStringAsFixed(1)}/5" : ""}
 ''';
-
     Share.share(shareText);
+  }
+
+  void _confirmDelete(FilmNoteViewModel viewModel) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Hapus Catatan?"),
+        content: const Text("Catatan film ini akan dihapus permanen."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
+          TextButton(
+            onPressed: () {
+              viewModel.deleteNote(filmNote!.id);
+              Navigator.pop(context); // Tutup dialog
+              Navigator.pop(context); // Kembali ke list
+            },
+            style: TextButton.styleFrom(foregroundColor: Colors.red),
+            child: const Text("Hapus"),
+          ),
+        ],
+      ),
+    );
   }
 
   Future<void> goToEdit(FilmNote note, FilmNoteViewModel viewModel) async {
@@ -73,213 +88,233 @@ Catatan dibuat di MyNotePlus 📱
 
     if (result == true && mounted) {
       setState(() => isLoading = true);
-      final updatedNote = await viewModel.getFilmNoteById(widget.filmId);
-      if (mounted) {
-        setState(() {
-          filmNote = updatedNote;
-          isLoading = false;
-        });
-
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text('Catatan berhasil diperbarui')),
-        );
-      }
+      _loadFilmNote();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final viewModel = Provider.of<FilmNoteViewModel>(context);
+    final viewModel = Provider.of<FilmNoteViewModel>(context, listen: false);
     final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
 
-    if (isLoading) {
-      return Scaffold(
-        appBar: AppBar(title: const Text("Detail Film/Drama")),
-        body: const Center(child: CircularProgressIndicator()),
-      );
-    }
-
-    if (filmNote == null) {
-      return Scaffold(
-        appBar: AppBar(title: const Text("Detail Film/Drama")),
-        body: const Center(child: Text("Catatan tidak ditemukan.")),
-      );
-    }
+    if (isLoading) return const Scaffold(body: Center(child: CircularProgressIndicator()));
+    if (filmNote == null) return const Scaffold(body: Center(child: Text("Catatan tidak ditemukan.")));
 
     final note = filmNote!;
     final lastEdited = formatSimpleDate(note.lastEdited);
 
     return Scaffold(
+      backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF5F7FA),
       appBar: AppBar(
-        title: const Text("Detail Film/Drama"),
+        elevation: 0,
+        backgroundColor: Colors.transparent,
+        leading: IconButton(
+          icon: Icon(Icons.arrow_back_ios_new_rounded, color: isDark ? Colors.white : Colors.black87),
+          onPressed: () => Navigator.pop(context),
+        ),
         actions: [
           IconButton(
-            icon: const Icon(Icons.share),
-            tooltip: "Bagikan",
+            icon: const Icon(Icons.share_outlined),
             onPressed: shareNote,
+            color: theme.colorScheme.primary,
           ),
           IconButton(
-            icon: const Icon(Icons.delete),
-            tooltip: "Hapus",
-            onPressed: () {
-              viewModel.deleteNote(note.id);
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text("Catatan film dihapus")),
-              );
-              Navigator.pop(context);
-            },
+            icon: const Icon(Icons.delete_outline_rounded),
+            onPressed: () => _confirmDelete(viewModel),
+            color: Colors.redAccent,
           ),
+          const SizedBox(width: 8),
         ],
       ),
-      body: Padding(
-        padding: const EdgeInsets.all(16),
-        child: SingleChildScrollView(
-          child: GestureDetector(
-            onTap: () => goToEdit(note, viewModel), // klik area card = edit
-            child: Card(
-              shape: RoundedRectangleBorder(
-                borderRadius: BorderRadius.circular(20),
+      floatingActionButton: FloatingActionButton.extended(
+        onPressed: () => goToEdit(note, viewModel),
+        icon: const Icon(Icons.edit_rounded),
+        label: const Text("Edit Review"),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+      ),
+      body: SingleChildScrollView(
+        physics: const BouncingScrollPhysics(),
+        padding: const EdgeInsets.symmetric(horizontal: 24),
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            // --- Header Title ---
+            const SizedBox(height: 10),
+            Text(
+              note.title.toUpperCase(),
+              style: theme.textTheme.headlineMedium?.copyWith(
+                fontWeight: FontWeight.w900,
+                letterSpacing: -0.5,
+                color: isDark ? Colors.white : Colors.black87,
               ),
-              elevation: 4,
-              shadowColor: Colors.black26,
-              child: Padding(
+            ),
+            const SizedBox(height: 8),
+            Row(
+              children: [
+                _buildBadge(note.year, theme.colorScheme.primary.withValues(alpha: 0.1), theme.colorScheme.primary),
+                const SizedBox(width: 8),
+                if (note.media != null)
+                  _buildBadge(note.media!, Colors.grey.withValues(alpha: 0.1), Colors.grey),
+              ],
+            ),
+            const SizedBox(height: 24),
+
+            // --- Status & Progress Card ---
+            Container(
+              padding: const EdgeInsets.all(20),
+              decoration: BoxDecoration(
+                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+                borderRadius: BorderRadius.circular(24),
+                boxShadow: [
+                  if (!isDark)
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.03),
+                      blurRadius: 20,
+                      offset: const Offset(0, 10),
+                    )
+                ],
+              ),
+              child: Column(
+                children: [
+                  _buildInfoRow(
+                    Icons.movie_creation_outlined,
+                    "Status Nonton",
+                    note.isFinished ? "Selesai" : "Sedang Berjalan",
+                    trailing: Icon(
+                      note.isFinished ? Icons.check_circle_rounded : Icons.pending_rounded,
+                      color: note.isFinished ? Colors.green : Colors.orange,
+                    ),
+                  ),
+                  const Divider(height: 32),
+                  _buildInfoRow(
+                    Icons. theater_comedy_outlined,
+                    "Progres Episode",
+                    "${note.episodeWatched} ${note.totalEpisodes != null ? "/ ${note.totalEpisodes}" : "Eps"}",
+                  ),
+                  if (note.nextEpisodeDate != null) ...[
+                    const Divider(height: 32),
+                    _buildInfoRow(
+                      Icons.schedule_rounded,
+                      "Jadwal Berikutnya",
+                      formatSimpleDate(note.nextEpisodeDate!),
+                    ),
+                  ],
+                ],
+              ),
+            ),
+
+            const SizedBox(height: 20),
+
+            // --- Rating Section (If Finished) ---
+            if (note.isFinished && note.overallRating != null)
+              Container(
                 padding: const EdgeInsets.all(20),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+                decoration: BoxDecoration(
+                  gradient: LinearGradient(
+                    colors: [theme.colorScheme.primary, theme.colorScheme.primaryContainer],
+                    begin: Alignment.topLeft,
+                    end: Alignment.bottomRight,
+                  ),
+                  borderRadius: BorderRadius.circular(24),
+                ),
+                child: Row(
                   children: [
-                    Text(
-                      note.title,
-                      style: theme.textTheme.headlineSmall?.copyWith(
-                        fontWeight: FontWeight.bold,
-                      ),
-                    ),
-                    const SizedBox(height: 6),
-                    Text(
-                      "Terakhir diubah: $lastEdited",
-                      style: theme.textTheme.bodySmall?.copyWith(
-                        color: Colors.grey,
-                      ),
-                    ),
-                    const Divider(height: 24),
-
-                    // Tahun
-                    if (note.year.isNotEmpty) ...[
-                      Row(
-                        children: [
-                          const Icon(Icons.calendar_today, size: 18),
-                          const SizedBox(width: 8),
-                          Text(note.year),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // Media
-                    if (note.media != null && note.media!.isNotEmpty) ...[
-                      Row(
-                        children: [
-                          const Icon(Icons.tv, size: 18),
-                          const SizedBox(width: 8),
-                          Text("Media: ${note.media}"),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // Episode terakhir
-                    Row(
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        const Icon(Icons.video_collection, size: 18),
-                        const SizedBox(width: 8),
-                        Text("Episode terakhir: ${note.episodeWatched}"),
-                      ],
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Total episode
-                    if (note.totalEpisodes != null) ...[
-                      Row(
-                        children: [
-                          const Icon(Icons.format_list_numbered, size: 18),
-                          const SizedBox(width: 8),
-                          Text("Total episode: ${note.totalEpisodes}"),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // Next episode
-                    if (note.nextEpisodeDate != null) ...[
-                      Row(
-                        children: [
-                          const Icon(Icons.notifications_active, size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Tayang berikutnya: ${formatSimpleDate(note.nextEpisodeDate!)}",
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // Status
-                    Row(
-                      children: [
-                        Icon(
-                          note.isFinished
-                              ? Icons.check_circle
-                              : Icons.hourglass_bottom,
-                          size: 18,
-                          color: note.isFinished ? Colors.green : Colors.orange,
+                        const Text(
+                          "RATING KAMU",
+                          style: TextStyle(color: Colors.white70, fontSize: 10, fontWeight: FontWeight.bold, letterSpacing: 1),
                         ),
-                        const SizedBox(width: 8),
-                        Text(
-                          note.isFinished
-                              ? "✅ Selesai ditonton"
-                              : "⏳ Belum selesai",
+                        const SizedBox(height: 4),
+                        Row(
+                          crossAxisAlignment: CrossAxisAlignment.end,
+                          children: [
+                            Text(
+                              note.overallRating!.toStringAsFixed(1),
+                              style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.bold),
+                            ),
+                            const Text(" / 5.0", style: TextStyle(color: Colors.white70, fontSize: 16)),
+                          ],
                         ),
                       ],
                     ),
-                    const SizedBox(height: 12),
-
-                    // Rating
-                    if (note.isFinished && note.overallRating != null) ...[
-                      Row(
-                        children: [
-                          const Icon(
-                            Icons.star_rate,
-                            size: 18,
-                            color: Colors.amber,
-                          ),
-                          const SizedBox(width: 8),
-                          Text(
-                            "Rating: ${note.overallRating!.toStringAsFixed(1)} / 5",
-                          ),
-                        ],
-                      ),
-                      const SizedBox(height: 12),
-                    ],
-
-                    // Rewatch
-                    if (note.isFinished && note.mustRewatch != null) ...[
-                      Row(
-                        children: [
-                          const Icon(Icons.loop, size: 18),
-                          const SizedBox(width: 8),
-                          Text(
-                            note.mustRewatch!
-                                ? "Wajib ditonton ulang"
-                                : "Tidak wajib rewatch",
-                          ),
-                        ],
-                      ),
-                    ],
+                    const Spacer(),
+                    const Icon(Icons.star_rounded, color: Colors.white, size: 48),
                   ],
                 ),
               ),
+            
+            if (note.mustRewatch == true) ...[
+               const SizedBox(height: 12),
+               _buildRewatchRibbon(theme),
+            ],
+
+            const SizedBox(height: 32),
+            Center(
+              child: Text(
+                "Terakhir diperbarui pada $lastEdited",
+                style: const TextStyle(color: Colors.grey, fontSize: 12),
+              ),
             ),
-          ),
+            const SizedBox(height: 100),
+          ],
         ),
+      ),
+    );
+  }
+
+  Widget _buildBadge(String text, Color bgColor, Color textColor) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+      decoration: BoxDecoration(color: bgColor, borderRadius: BorderRadius.circular(8)),
+      child: Text(
+        text,
+        style: TextStyle(color: textColor, fontSize: 12, fontWeight: FontWeight.bold),
+      ),
+    );
+  }
+
+  Widget _buildInfoRow(IconData icon, String label, String value, {Widget? trailing}) {
+    return Row(
+      children: [
+        Container(
+          padding: const EdgeInsets.all(8),
+          decoration: BoxDecoration(
+            color: Colors.grey.withValues(alpha: 0.1),
+            borderRadius: BorderRadius.circular(10),
+          ),
+          child: Icon(icon, size: 20, color: Colors.grey),
+        ),
+        const SizedBox(width: 16),
+        Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
+          ],
+        ),
+        const Spacer(),
+        if (trailing != null) trailing,
+      ],
+    );
+  }
+
+  Widget _buildRewatchRibbon(ThemeData theme) {
+    return Container(
+      padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+      decoration: BoxDecoration(
+        color: Colors.amber.withValues(alpha: 0.1),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+      ),
+      child: const Row(
+        children: [
+          Icon(Icons.repeat_rounded, color: Colors.amber, size: 20),
+          SizedBox(width: 10),
+          Text("Wajib Ditonton Ulang", style: TextStyle(color: Colors.amber, fontWeight: FontWeight.bold)),
+        ],
       ),
     );
   }
