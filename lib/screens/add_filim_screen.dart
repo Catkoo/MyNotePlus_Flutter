@@ -186,9 +186,15 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
   }
 
   Future<bool> _onWillPop() async {
-    final isEmpty = _titleController.text.trim().isEmpty &&
+    final isEmpty =
+        _titleController.text.trim().isEmpty &&
         _yearController.text.trim().isEmpty &&
-        _mediaController.text.trim().isEmpty;
+        _mediaController.text.trim().isEmpty &&
+        _episodeController.text.trim() == '1' &&
+        _totalEpisodeController.text.trim().isEmpty &&
+        _rating == 0.0 &&
+        !_mustRewatch &&
+        selectedStatus == 'Belum selesai';
 
     if (isEmpty) return true;
 
@@ -196,17 +202,17 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text("Batalkan Catatan?"),
-        content: const Text("Perubahan yang Anda buat belum disimpan."),
+        title: const Text("Keluar tanpa menyimpan?"),
+        content: const Text("Data yang kamu isi belum disimpan."),
         actions: [
           TextButton(
             onPressed: () => Navigator.of(context).pop(false),
-            child: const Text("Lanjut Tulis"),
+            child: const Text("Lanjut"),
           ),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text("Hapus"),
+            child: const Text("Keluar"),
           ),
         ],
       ),
@@ -223,10 +229,10 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
     return PopScope(
       canPop: false,
       onPopInvokedWithResult: (didPop, result) async {
-        if (didPop) return;
-        final canPop = await _onWillPop();
-        if (canPop && context.mounted) {
-          Navigator.pop(context);
+        if (didPop) return; 
+        final canExit = await _onWillPop();
+        if (canExit && context.mounted) {
+          Navigator.of(context).pop(); 
         }
       },
       child: Scaffold(
