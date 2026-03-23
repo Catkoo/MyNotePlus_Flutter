@@ -18,12 +18,120 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
   final _episodeController = TextEditingController(text: '1');
   final _totalEpisodeController = TextEditingController();
 
+  // Data Platform untuk Grid Picker
+  final List<Map<String, dynamic>> platformList = [
+    {'name': 'Netflix', 'icon': Icons.movie_filter_rounded},
+    {'name': 'Iqiyi', 'icon': Icons.video_library_rounded},
+    {'name': 'WeTV', 'icon': Icons.live_tv_rounded},
+    {'name': 'Viu', 'icon': Icons.tv_rounded},
+    {'name': 'Youku', 'icon': Icons.smart_display_rounded},
+    {'name': 'Disney+', 'icon': Icons.auto_awesome_motion_rounded},
+    {'name': 'Prime', 'icon': Icons.layers_rounded},
+    {'name': 'YouTube', 'icon': Icons.play_circle_filled_rounded},
+  ];
+
   final statusOptions = ['Belum selesai', 'Selesai'];
   String selectedStatus = 'Belum selesai';
 
   double _rating = 0.0;
   bool _mustRewatch = false;
   bool isSaving = false;
+
+  // Tampilan Platform Picker Grid
+  void _showPlatformPicker() {
+    final theme = Theme.of(context);
+    final isDark = theme.brightness == Brightness.dark;
+
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: Colors.transparent,
+      isScrollControlled: true,
+      builder: (context) {
+        return Container(
+          decoration: BoxDecoration(
+            color: isDark ? const Color(0xFF1A1A1A) : Colors.white,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(32)),
+          ),
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 15),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              Container(
+                width: 45,
+                height: 5,
+                decoration: BoxDecoration(
+                  color: Colors.grey.withOpacity(0.3),
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              const SizedBox(height: 25),
+              Text(
+                "Pilih Platform Nonton",
+                style: theme.textTheme.titleMedium?.copyWith(fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 25),
+              GridView.builder(
+                shrinkWrap: true,
+                physics: const NeverScrollableScrollPhysics(),
+                gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                  crossAxisCount: 4,
+                  mainAxisSpacing: 15,
+                  crossAxisSpacing: 15,
+                  childAspectRatio: 0.8,
+                ),
+                itemCount: platformList.length + 1,
+                itemBuilder: (context, index) {
+                  if (index < platformList.length) {
+                    final p = platformList[index];
+                    return _buildPlatformItem(p['name'], p['icon'], theme);
+                  } else {
+                    return _buildPlatformItem("Lainnya", Icons.edit_note_rounded, theme, isManual: true);
+                  }
+                },
+              ),
+              const SizedBox(height: 30),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildPlatformItem(String name, IconData icon, ThemeData theme, {bool isManual = false}) {
+    final isDark = theme.brightness == Brightness.dark;
+    return InkWell(
+      onTap: () {
+        Navigator.pop(context);
+        if (!isManual) {
+          setState(() => _mediaController.text = name);
+        }
+        // Jika manual, keyboard akan muncul otomatis karena TextField tidak diblokir lagi
+      },
+      borderRadius: BorderRadius.circular(20),
+      child: Column(
+        children: [
+          Container(
+            height: 60,
+            width: 60,
+            decoration: BoxDecoration(
+              color: isDark ? Colors.white.withOpacity(0.05) : theme.colorScheme.primary.withOpacity(0.05),
+              borderRadius: BorderRadius.circular(18),
+              border: Border.all(color: theme.colorScheme.primary.withOpacity(0.1)),
+            ),
+            child: Icon(icon, color: theme.colorScheme.primary, size: 28),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            name,
+            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold),
+            textAlign: TextAlign.center,
+            maxLines: 1,
+            overflow: TextOverflow.ellipsis,
+          ),
+        ],
+      ),
+    );
+  }
 
   void _saveFilmNote() async {
     final title = _titleController.text.trim();
@@ -80,9 +188,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
   Future<bool> _onWillPop() async {
     final isEmpty = _titleController.text.trim().isEmpty &&
         _yearController.text.trim().isEmpty &&
-        _mediaController.text.trim().isEmpty &&
-        _episodeController.text.trim().isEmpty &&
-        _totalEpisodeController.text.trim().isEmpty;
+        _mediaController.text.trim().isEmpty;
 
     if (isEmpty) return true;
 
@@ -150,13 +256,13 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle("🎬 INFORMASI FILM"),
+              _buildSectionTitle("🎬 Detail Informasi"),
               const SizedBox(height: 12),
               _buildModernTextField(
                 controller: _titleController,
-                label: "Judul Film atau Drama",
+                label: "Judul Film/Drama/Donghua",
                 icon: Icons.movie_filter_rounded,
-                hint: "Contoh: Interstellar",
+                textCapitalization: TextCapitalization.words,
               ),
               const SizedBox(height: 16),
               Row(
@@ -167,7 +273,6 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                       label: "Tahun Rilis",
                       icon: Icons.calendar_month_rounded,
                       keyboardType: TextInputType.number,
-                      hint: "2024",
                     ),
                   ),
                   const SizedBox(width: 16),
@@ -176,7 +281,9 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                       controller: _mediaController,
                       label: "Platform",
                       icon: Icons.connected_tv_rounded,
-                      hint: "Netflix, Cinema",
+                      textCapitalization: TextCapitalization.words,
+                      hint: "Klik pilih",
+                      onTap: _showPlatformPicker, // Trigger menu tapi tetap bisa diketik
                     ),
                   ),
                 ],
@@ -207,10 +314,11 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                 ],
               ),
               const SizedBox(height: 20),
+              // Status Switcher
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
-                  color: theme.colorScheme.surfaceContainerHighest.withValues(alpha: 0.3),
+                  color: theme.colorScheme.surfaceVariant.withOpacity(0.3),
                   borderRadius: BorderRadius.circular(16),
                 ),
                 child: Row(
@@ -241,6 +349,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                 ),
               ),
               const SizedBox(height: 32),
+              // Rating & Rewatch Section (Hanya muncul jika selesai)
               if (selectedStatus == 'Selesai') ...[
                 _buildSectionTitle("⭐ PENILAIAN"),
                 const SizedBox(height: 12),
@@ -249,7 +358,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                   decoration: BoxDecoration(
                     color: theme.colorScheme.surface,
                     borderRadius: BorderRadius.circular(24),
-                    border: Border.all(color: theme.colorScheme.outlineVariant.withValues(alpha: 0.5)),
+                    border: Border.all(color: theme.colorScheme.outlineVariant.withOpacity(0.5)),
                   ),
                   child: Column(
                     children: [
@@ -286,6 +395,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                 ),
               ],
               const SizedBox(height: 40),
+              // Tombol Simpan
               Container(
                 width: double.infinity,
                 height: 60,
@@ -293,7 +403,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                   borderRadius: BorderRadius.circular(20),
                   boxShadow: [
                     BoxShadow(
-                      color: theme.colorScheme.primary.withValues(alpha: 0.3),
+                      color: theme.colorScheme.primary.withOpacity(0.3),
                       blurRadius: 12,
                       offset: const Offset(0, 6),
                     )
@@ -343,44 +453,34 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
     required IconData icon,
     String? hint,
     TextInputType? keyboardType,
+    TextCapitalization textCapitalization = TextCapitalization.none,
+    VoidCallback? onTap,
   }) {
     final isDark = Theme.of(context).brightness == Brightness.dark;
-    return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
-      children: [
-        Container(
-          decoration: BoxDecoration(
-            color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+    return Container(
+      decoration: BoxDecoration(
+        color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: TextField(
+        controller: controller,
+        onTap: onTap,
+        keyboardType: keyboardType,
+        textCapitalization: textCapitalization,
+        style: const TextStyle(fontWeight: FontWeight.w600),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          prefixIcon: Icon(icon, size: 20),
+          border: OutlineInputBorder(
             borderRadius: BorderRadius.circular(16),
-            boxShadow: [
-              if (!isDark)
-                BoxShadow(
-                  color: Colors.black.withValues(alpha: 0.03),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                )
-            ],
+            borderSide: BorderSide.none,
           ),
-          child: TextField(
-            controller: controller,
-            keyboardType: keyboardType,
-            style: const TextStyle(fontWeight: FontWeight.w600),
-            decoration: InputDecoration(
-              labelText: label,
-              hintText: hint,
-              hintStyle: const TextStyle(fontWeight: FontWeight.normal, fontSize: 14),
-              prefixIcon: Icon(icon, size: 20),
-              border: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide.none,
-              ),
-              filled: true,
-              fillColor: Colors.transparent,
-              contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
-            ),
-          ),
+          filled: true,
+          fillColor: Colors.transparent,
+          contentPadding: const EdgeInsets.symmetric(vertical: 16, horizontal: 20),
         ),
-      ],
+      ),
     );
   }
 }

@@ -1,4 +1,5 @@
 import 'dart:async';
+import 'package:rxdart/rxdart.dart';
 import 'package:flutter/material.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:package_info_plus/package_info_plus.dart';
@@ -9,13 +10,11 @@ import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:flutter/services.dart';
 import 'package:flutter_speed_dial/flutter_speed_dial.dart';
-import '../widgets/home_backup_sync_buttons.dart';
 import '../viewmodel/note_view_model.dart';
 import '../viewmodel/film_note_viewmodel.dart';
 import '../models/note_model.dart';
 import '../models/film_note.dart';
 import 'profile_screen.dart';
-import '../screens/profile_screen_with_backup.dart';
 import '../services/backup_service.dart';
 import '../services/google_drive_service.dart';
 
@@ -36,10 +35,103 @@ class _HomeScreenState extends State<HomeScreen> {
   String updateChangelog = "";
   bool hasNewNotification = false;
   bool hasUnread = false;
+  StreamSubscription? _unreadSub;
 
   final FirebaseMessaging _messaging = FirebaseMessaging.instance;
   final FlutterLocalNotificationsPlugin _localNotifications =
       FlutterLocalNotificationsPlugin();
+
+        // Fungsi untuk menangani Backup ke Google Drive
+      Future<void> _handleBackup() async {
+        try {
+          // Menampilkan loading sederhana (opsional)
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text("Sedang mencadangkan data..."), duration: Duration(seconds: 1)),
+          );
+
+          final file = await BackupService().exportDataToJson();
+          await GoogleDriveService().uploadJsonBackup(
+            file,
+            "mynoteplus_backup.json",
+          );
+
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.green,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                content: const Text("✅ Backup berhasil diupload ke Google Drive"),
+              ),
+            );
+          }
+        } catch (e) {
+          if (mounted) {
+            ScaffoldMessenger.of(context).showSnackBar(
+              SnackBar(
+                behavior: SnackBarBehavior.floating,
+                backgroundColor: Colors.red,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                content: Text("❌ Gagal backup: $e"),
+              ),
+            );
+          }
+        }
+      }
+
+      // Fungsi untuk menangani Restore dari Google Drive
+      Future<void> _handleRestore() async {
+        final confirmed = await showDialog<bool>(
+          context: context,
+          builder: (_) => AlertDialog(
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            title: const Text("Konfirmasi Restore"),
+            content: const Text("Data saat ini di aplikasi akan ditimpa dengan data dari Drive. Lanjutkan?"),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.pop(context, false),
+                child: const Text("Batal"),
+              ),
+              ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                ),
+                onPressed: () => Navigator.pop(context, true),
+                child: const Text("Ya, Restore"),
+              ),
+            ],
+          ),
+        );
+
+        if (confirmed == true) {
+          try {
+            await BackupService().restoreFromJsonBackup();
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: Colors.green,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  content: const Text("✅ Restore berhasil! Silakan cek catatan Anda."),
+                ),
+              );
+            }
+          } catch (e) {
+            if (mounted) {
+              ScaffoldMessenger.of(context).showSnackBar(
+                SnackBar(
+                  behavior: SnackBarBehavior.floating,
+                  backgroundColor: Colors.red,
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                  content: Text("❌ Gagal restore: $e"),
+                ),
+              );
+            }
+          }
+        }
+      }
 
   @override
   void initState() {
@@ -96,46 +188,69 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  void _listenForUnreadNotifications() {
-    final uid = FirebaseAuth.instance.currentUser?.uid;
-    if (uid == null) return;
+    void _listenForUnreadNotifications() {
+      final uid = FirebaseAuth.instance.currentUser?.uid;
+      if (uid == null) return;
 
-    FirebaseFirestore.instance
-        .collection('users')
-        .doc(uid)
-        .collection('notifications')
-        .where('isRead', isEqualTo: false)
-        .snapshots()
-        .listen((snapshot) {
-          final hasData = snapshot.docs.isNotEmpty;
-          debugPrint('🔍 hasUnread: $hasData');
+      _unreadSub?.cancel();
+
+      final globalStream = FirebaseFirestore.instance
+          .collection('announcements')
+          .snapshots();
+
+      final readStream = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('readAnnouncements')
+          .snapshots();
+
+      final personalStream = FirebaseFirestore.instance
+          .collection('users')
+          .doc(uid)
+          .collection('notifications')
+          .where('isRead', isEqualTo: false)
+          .snapshots();
+
+      _unreadSub = Rx.combineLatest3(
+        globalStream,
+        readStream,
+        personalStream,
+        (QuerySnapshot globalSnap, QuerySnapshot readSnap, QuerySnapshot personalSnap) {
+
+          final globalDocs = globalSnap.docs;
+          final readIds = readSnap.docs.map((e) => e.id).toSet();
+          final personalUnread = personalSnap.docs.length;
+
+          // 🔥 HITUNG YANG BELUM DIBACA (GLOBAL)
+          final globalUnread = globalDocs
+              .where((doc) => !readIds.contains(doc.id))
+              .length;
+
+          return globalUnread + personalUnread;
+        },
+      ).listen((totalUnread) {
+        if (mounted) {
           setState(() {
-            hasUnread = hasData;
+            hasUnread = totalUnread > 0;
           });
-        });
-  }
+        }
+      });
+    }
 
-  void _initFCM() async {
+    void _initFCM() async {
     NotificationSettings settings = await _messaging.requestPermission();
 
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       debugPrint('✅ Notifikasi diizinkan');
 
-      final token = await _messaging.getToken();
-      debugPrint('📱 Token FCM: $token');
-
       FirebaseMessaging.onMessage.listen((RemoteMessage message) {
         final notification = message.notification;
         if (notification != null) {
           _showLocalNotification(notification.title, notification.body);
-          setState(() => hasNewNotification = true);
         }
       });
-    } else {
-      debugPrint('❌ Notifikasi tidak diizinkan');
     }
   }
-
   void _showLocalNotification(String? title, String? body) {
     const AndroidNotificationDetails androidDetails =
         AndroidNotificationDetails(
@@ -159,6 +274,10 @@ class _HomeScreenState extends State<HomeScreen> {
   }
 
   @override
+      void dispose() {
+      _unreadSub?.cancel(); // Sangat penting untuk performa
+      super.dispose();
+    }
   Widget build(BuildContext context) {
     if (isMaintenance) {
       return MaintenanceScreen(message: maintenanceMessage);
@@ -171,184 +290,137 @@ class _HomeScreenState extends State<HomeScreen> {
       length: 2,
       child: Scaffold(
         extendBody: true,
-        appBar: AppBar(
-          elevation: 0,
-          scrolledUnderElevation: 0,
-          backgroundColor: Theme.of(
-            context,
-          ).colorScheme.surface.withOpacity(0.95),
-          title: const Text(
-            "MyNotePlus",
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-              fontSize: 20,
-              letterSpacing: 0.5,
+          appBar: AppBar(
+            elevation: 0,
+            scrolledUnderElevation: 2, // Memberi efek elevasi halus saat konten di-scroll
+            backgroundColor: Theme.of(context).colorScheme.surface.withValues(alpha: 0.95),
+            centerTitle: true,
+            title: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                const Text(
+                  "MyNotePlus",
+                  style: TextStyle(
+                    fontWeight: FontWeight.bold, 
+                    fontSize: 20, 
+                    letterSpacing: 0.8,
+                  ),
+                ),
+                Text(
+                  "Digital Notebook",
+                  style: TextStyle(
+                    fontSize: 10, 
+                    color: Colors.grey[600], 
+                    fontWeight: FontWeight.w500,
+                    letterSpacing: 1.2,
+                  ),
+                ),
+              ],
             ),
-          ),
-          centerTitle: true,
-          actions: [
-            // Notification icon
-            IconButton(
-              tooltip: "Notifikasi",
-              onPressed: () async {
-                await Navigator.pushNamed(context, '/notification');
-              },
-              icon: Stack(
+            leading: const Icon(Icons.notes_rounded, color: Colors.indigo),
+            actions: [
+              Stack(
+                alignment: Alignment.center,
                 children: [
-                  const Icon(Icons.notifications_outlined, size: 26),
+                    IconButton(
+                      tooltip: "Notifikasi",
+                      onPressed: () async {
+                        await Navigator.pushNamed(context, '/notification');
+                      },
+                      icon: Icon(
+                        hasUnread ? Icons.notifications_active_rounded : Icons.notifications_none_rounded,
+                        size: 26,
+                        color: hasUnread ? Colors.indigo : Colors.grey[600],
+                      ),
+                    ),
                   if (hasUnread)
                     Positioned(
-                      right: 0,
-                      top: 0,
+                      right: 12,
+                      top: 14,
                       child: Container(
-                        height: 16,
-                        width: 16,
-                        decoration: const BoxDecoration(
-                          color: Colors.red,
+                        padding: const EdgeInsets.all(4),
+                        decoration: BoxDecoration(
+                          color: Colors.redAccent,
                           shape: BoxShape.circle,
-                        ),
-                        child: const Center(
-                          child: Text(
-                            '!',
-                            style: TextStyle(
-                              color: Colors.white,
-                              fontSize: 11,
-                              fontWeight: FontWeight.bold,
-                            ),
+                          border: Border.all(
+                            color: Theme.of(context).colorScheme.surface, 
+                            width: 2,
                           ),
+                        ),
+                        constraints: const BoxConstraints(
+                          minWidth: 10,
+                          minHeight: 10,
                         ),
                       ),
                     ),
                 ],
               ),
-            ),
-
-            // Backup
-            IconButton(
-              icon: const Icon(Icons.cloud_upload_outlined, size: 24),
-              tooltip: "Backup ke Google Drive",
-              onPressed: () async {
-                try {
-                  final file = await BackupService().exportDataToJson();
-                  await GoogleDriveService().uploadJsonBackup(
-                    file,
-                    "mynoteplus_backup.json",
-                  );
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      content: const Text(
-                        "✅ Backup berhasil diupload ke Google Drive",
-                      ),
-                    ),
-                  );
-                } catch (e) {
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      behavior: SnackBarBehavior.floating,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                      ),
-                      content: Text("❌ Gagal backup: $e"),
-                    ),
-                  );
-                }
-              },
-            ),
-
-            // Restore
-            IconButton(
-              icon: const Icon(Icons.cloud_download_outlined, size: 24),
-              tooltip: "Restore dari Google Drive",
-              onPressed: () async {
-                final confirmed = await showDialog<bool>(
-                  context: context,
-                  builder: (_) => AlertDialog(
-                    shape: RoundedRectangleBorder(
-                      borderRadius: BorderRadius.circular(16),
-                    ),
-                    title: const Text("Konfirmasi Restore"),
-                    content: const Text(
-                      "Data saat ini akan ditimpa. Lanjutkan?",
-                    ),
-                    actions: [
-                      TextButton(
-                        onPressed: () => Navigator.pop(context, false),
-                        child: const Text("Batal"),
-                      ),
-                      ElevatedButton(
-                        style: ElevatedButton.styleFrom(
-                          shape: RoundedRectangleBorder(
-                            borderRadius: BorderRadius.circular(12),
-                          ),
-                        ),
-                        onPressed: () => Navigator.pop(context, true),
-                        child: const Text("Restore"),
-                      ),
-                    ],
-                  ),
-                );
-
-                if (confirmed == true) {
-                  try {
-                    await BackupService().restoreFromJsonBackup();
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        content: const Text("✅ Restore berhasil"),
-                      ),
-                    );
-                  } catch (e) {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      SnackBar(
-                        behavior: SnackBarBehavior.floating,
-                        shape: RoundedRectangleBorder(
-                          borderRadius: BorderRadius.circular(12),
-                        ),
-                        content: Text("❌ Gagal restore: $e"),
-                      ),
-                    );
-                  }
-                }
-              },
-            ),
-          ],
-          bottom: selectedBottomTab == 0
-              ? PreferredSize(
-                  preferredSize: const Size.fromHeight(50),
-                  child: Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    child: TabBar(
-                      indicator: BoxDecoration(
-                        borderRadius: BorderRadius.circular(12),
-                        color: Theme.of(context).colorScheme.primaryContainer,
-                      ),
-                      indicatorSize: TabBarIndicatorSize.tab,
-                      labelStyle: const TextStyle(
-                        fontWeight: FontWeight.w600,
-                        fontSize: 14,
-                      ),
-                      unselectedLabelColor: Theme.of(
-                        context,
-                      ).colorScheme.onSurfaceVariant,
-                      labelColor: Theme.of(
-                        context,
-                      ).colorScheme.onPrimaryContainer,
-                      tabs: const [
-                        Tab(text: "Pribadi"),
-                        Tab(text: "Film/Drama"),
-                      ],
+              PopupMenuButton<String>(
+                icon: const Icon(Icons.cloud_outlined),
+                onSelected: (value) {
+                  if (value == 'backup') _handleBackup(); // Pindahkan logika backup ke function sendiri
+                  if (value == 'restore') _handleRestore(); // Pindahkan logika restore ke function sendiri
+                },
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                itemBuilder: (context) => [
+                  const PopupMenuItem(
+                    value: 'backup',
+                    child: ListTile(
+                      leading: Icon(Icons.cloud_upload_outlined, color: Colors.blue),
+                      title: Text("Backup Cloud"),
+                      contentPadding: EdgeInsets.zero,
                     ),
                   ),
-                )
-              : null,
-        ),
+                  const PopupMenuItem(
+                    value: 'restore',
+                    child: ListTile(
+                      leading: Icon(Icons.cloud_download_outlined, color: Colors.green),
+                      title: Text("Restore Data"),
+                      contentPadding: EdgeInsets.zero,
+                    ),
+                  ),
+                ],
+              ),
+              const SizedBox(width: 8),
+            ],
+
+            // --- TABBAR DESIGN (Pribadi & Film) ---
+            bottom: selectedBottomTab == 0
+                ? PreferredSize(
+                    preferredSize: const Size.fromHeight(55),
+                    child: Container(
+                      margin: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                      padding: const EdgeInsets.all(4),
+                      decoration: BoxDecoration(
+                        color: Theme.of(context).colorScheme.onSurface.withValues(alpha: 0.05),
+                        borderRadius: BorderRadius.circular(15),
+                      ),
+                      child: TabBar(
+                        dividerColor: Colors.transparent,
+                        indicator: BoxDecoration(
+                          borderRadius: BorderRadius.circular(12),
+                          color: Theme.of(context).colorScheme.primary,
+                          boxShadow: [
+                            BoxShadow(
+                              color: Theme.of(context).colorScheme.primary.withValues(alpha: 0.3),
+                              blurRadius: 8,
+                              offset: const Offset(0, 4),
+                            )
+                          ],
+                        ),
+                        indicatorSize: TabBarIndicatorSize.tab,
+                        labelStyle: const TextStyle(fontWeight: FontWeight.bold, fontSize: 13),
+                        labelColor: Colors.white,
+                        unselectedLabelColor: Colors.grey[600],
+                        tabs: const [
+                          Tab(child: Text("Pribadi")),
+                          Tab(child: Text("Film/Drama/Donghua")),
+                        ],
+                      ),
+                    ),
+                  )
+                : null,
+          ),
         body: Stack(
           children: [
             AnimatedSwitcher(
@@ -414,39 +486,41 @@ class _HomeScreenState extends State<HomeScreen> {
           ],
         ),
         bottomNavigationBar: Container(
-          margin: const EdgeInsets.fromLTRB(16, 0, 16, 0),
-          decoration: BoxDecoration(
-            color: Theme.of(context).colorScheme.surface,
-            borderRadius: BorderRadius.circular(20),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withOpacity(0.05),
-                blurRadius: 12,
-                offset: const Offset(0, 6),
-              ),
-            ],
-          ),
+        margin: const EdgeInsets.fromLTRB(20, 0, 20, 24), 
+        decoration: BoxDecoration(
+          borderRadius: BorderRadius.circular(24),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withValues(alpha: 0.1), 
+              blurRadius: 20,
+              offset: const Offset(0, 10),
+            ),
+          ],
+        ),
+        child: ClipRRect(
+          borderRadius: BorderRadius.circular(24),
           child: NavigationBar(
-            height: 65,
-            backgroundColor: Colors.transparent,
+            height: 70, 
+            elevation: 0,
+            backgroundColor: Theme.of(context).colorScheme.surface,
             selectedIndex: selectedBottomTab,
-            onDestinationSelected: (index) {
-              setState(() => selectedBottomTab = index);
-            },
-            destinations: const [
+            indicatorColor: Theme.of(context).colorScheme.primary.withValues(alpha: 0.1),
+            onDestinationSelected: (index) => setState(() => selectedBottomTab = index),
+            destinations: [
               NavigationDestination(
-                icon: Icon(Icons.home_outlined),
-                selectedIcon: Icon(Icons.home),
-                label: 'Home',
+                icon: const Icon(Icons.home_outlined),
+                selectedIcon: Icon(Icons.home_rounded, color: Theme.of(context).colorScheme.primary),
+                label: 'Beranda',
               ),
               NavigationDestination(
-                icon: Icon(Icons.person_outline),
-                selectedIcon: Icon(Icons.person),
+                icon: const Icon(Icons.person_outline),
+                selectedIcon: Icon(Icons.person_rounded, color: Theme.of(context).colorScheme.primary),
                 label: 'Profil',
               ),
             ],
           ),
         ),
+      ),
         floatingActionButton: selectedBottomTab == 0
             ? SpeedDial(
                 icon: Icons.add_rounded, 
@@ -466,7 +540,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   SpeedDialChild(
                     child: const Icon(Icons.movie_filter_rounded, color: Colors.white),
                     backgroundColor: Colors.orange[400], // Warna yang ceria untuk film
-                    label: "Tambah Progres Film",
+                    label: "Tambah Progres Film/Drama/Donghua",
                     labelStyle: const TextStyle(fontWeight: FontWeight.w600),
                     labelBackgroundColor: isDark ? Colors.grey[800] : Colors.white,
                     onTap: () => Navigator.pushNamed(context, '/add_film_note'),
@@ -749,10 +823,7 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
                       ],
                     )
                   : GridView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
@@ -983,7 +1054,7 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                   controller: _searchController,
                   onChanged: (value) => setState(() => _searchQuery = value),
                   decoration: InputDecoration(
-                    hintText: "Cari film atau drama...",
+                    hintText: "Cari film/drama/donghua...",
                     hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
                     prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
                     filled: true,
@@ -1021,7 +1092,7 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                               ),
                               const SizedBox(height: 24),
                               Text(
-                                "Belum ada koleksi film",
+                                "Belum ada koleksi film/drama/donghua",
                                 style: theme.textTheme.titleLarge?.copyWith(
                                   fontWeight: FontWeight.bold,
                                   color: isDark ? Colors.white : Colors.black87,
@@ -1031,7 +1102,7 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                               Padding(
                                 padding: const EdgeInsets.symmetric(horizontal: 40),
                                 child: Text(
-                                  "Catat film atau drama yang sedang kamu tonton agar tidak lupa progresnya!",
+                                  "Catat film/drama/donghua yang sedang kamu tonton agar tidak lupa progresnya!",
                                   textAlign: TextAlign.center,
                                   style: theme.textTheme.bodyMedium?.copyWith(
                                     color: isDark ? Colors.white54 : Colors.black54,
@@ -1041,16 +1112,13 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                             ],
                                               )
                   : GridView.builder(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 16,
-                        vertical: 8,
-                      ),
+                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
                       gridDelegate:
                           const SliverGridDelegateWithFixedCrossAxisCount(
                             crossAxisCount: 2,
                             crossAxisSpacing: 14,
                             mainAxisSpacing: 14,
-                            childAspectRatio: 3 / 2,
+                            childAspectRatio: 3 / 2.5,
                           ),
                       itemCount: filteredNotes.length,
                       itemBuilder: (context, index) {
@@ -1084,64 +1152,74 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                                     padding: const EdgeInsets.all(16),
                                     child: Column(
                                       crossAxisAlignment: CrossAxisAlignment.start,
+                                      // KUNCI UTAMA: Mendorong grup atas ke atas, grup bawah ke bawah
+                                      mainAxisAlignment: MainAxisAlignment.spaceBetween, 
                                       children: [
-                                        // Title
-                                        Text(
-                                          note.title,
-                                          style: theme.textTheme.titleMedium?.copyWith(
-                                            fontWeight: FontWeight.bold,
-                                            letterSpacing: -0.5,
-                                            color: isDark ? Colors.white : Colors.black87,
-                                          ),
-                                          maxLines: 2,
-                                          overflow: TextOverflow.ellipsis,
-                                        ),
-                                        const SizedBox(height: 6),
-                                        // Year Chip-like text
-                                        Container(
-                                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                          decoration: BoxDecoration(
-                                            color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
-                                            borderRadius: BorderRadius.circular(8),
-                                          ),
-                                          child: Text(
-                                            "${note.year}",
-                                            style: theme.textTheme.labelSmall?.copyWith(
-                                              fontWeight: FontWeight.w600,
-                                              color: isDark ? Colors.white70 : Colors.black54,
-                                            ),
-                                          ),
-                                        ),
-                                        const Spacer(),
-                                        // Episode Progress Text
-                                        Row(
-                                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        // --- GRUP ATAS: JUDUL & TAHUN ---
+                                        Column(
+                                          crossAxisAlignment: CrossAxisAlignment.start,
                                           children: [
                                             Text(
-                                              "Eps: ${note.episodeWatched}/${note.totalEpisodes ?? '?'}",
-                                              style: theme.textTheme.bodySmall?.copyWith(
-                                                fontWeight: FontWeight.w500,
-                                                color: isDark ? Colors.white60 : Colors.black45,
+                                              note.title,
+                                              style: theme.textTheme.titleMedium?.copyWith(
+                                                fontWeight: FontWeight.bold,
+                                                letterSpacing: -0.5,
+                                                color: isDark ? Colors.white : Colors.black87,
+                                              ),
+                                              maxLines: 2,
+                                              overflow: TextOverflow.ellipsis,
+                                            ),
+                                            const SizedBox(height: 4),
+                                            Container(
+                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                              decoration: BoxDecoration(
+                                                color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
+                                                borderRadius: BorderRadius.circular(8),
+                                              ),
+                                              child: Text(
+                                                "${note.year}",
+                                                style: theme.textTheme.labelSmall?.copyWith(
+                                                  fontWeight: FontWeight.w600,
+                                                  color: isDark ? Colors.white70 : Colors.black54,
+                                                ),
                                               ),
                                             ),
-                                            if (note.isFinished)
-                                              const Icon(Icons.check_circle_rounded, color: Colors.green, size: 20),
                                           ],
                                         ),
-                                        const SizedBox(height: 8),
-                                        // Modern Progress Bar
-                                        if (!note.isFinished)
-                                          ClipRRect(
-                                            borderRadius: BorderRadius.circular(10),
-                                            child: LinearProgressIndicator(
-                                              value: (note.totalEpisodes != null && note.totalEpisodes! > 0)
-                                                  ? note.episodeWatched / note.totalEpisodes!
-                                                  : 0,
-                                              backgroundColor: isDark ? Colors.white10 : Colors.grey[200],
-                                              color: theme.colorScheme.primary,
-                                              minHeight: 6,
+
+                                        // --- GRUP BAWAH: EPISODE & PROGRESS BAR ---
+                                        Column(
+                                          children: [
+                                            Row(
+                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                              children: [
+                                                Text(
+                                                  "Eps: ${note.episodeWatched}/${note.totalEpisodes ?? '?'}",
+                                                  style: theme.textTheme.bodySmall?.copyWith(
+                                                    fontWeight: FontWeight.w500,
+                                                    color: isDark ? Colors.white60 : Colors.black45,
+                                                  ),
+                                                ),
+                                                if (note.isFinished)
+                                                  const Icon(Icons.check_circle_rounded, color: Colors.green, size: 18),
+                                              ],
                                             ),
-                                          ),
+                                            const SizedBox(height: 6),
+                                            // Bar ini sekarang aman karena dibungkus dalam grup bawah
+                                            if (!note.isFinished)
+                                              ClipRRect(
+                                                borderRadius: BorderRadius.circular(10),
+                                                child: LinearProgressIndicator(
+                                                  value: (note.totalEpisodes != null && note.totalEpisodes! > 0)
+                                                      ? note.episodeWatched / note.totalEpisodes!
+                                                      : 0,
+                                                  backgroundColor: isDark ? Colors.white10 : Colors.grey[200],
+                                                  color: theme.colorScheme.primary,
+                                                  minHeight: 6,
+                                                ),
+                                              ),
+                                          ],
+                                        ),
                                       ],
                                     ),
                                   ),

@@ -43,18 +43,38 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
     return "$day/$month/$year • $hour:$minute";
   }
 
-  void shareNote() {
-    if (filmNote == null) return;
-    final note = filmNote!;
-    final shareText = '''
-🎬 ${note.title} (${note.year})
-📌 Media: ${note.media ?? "-"}
-📺 Episode: ${note.episodeWatched}${note.totalEpisodes != null ? " / ${note.totalEpisodes}" : ""}
-Status: ${note.isFinished ? "✅ Selesai" : "⏳ Belum selesai"}
-${note.overallRating != null ? "⭐ Rating: ${note.overallRating!.toStringAsFixed(1)}/5" : ""}
-''';
-    Share.share(shareText);
-  }
+    void shareNote() {
+      if (filmNote == null) return;
+      final note = filmNote!;
+      
+      // Penentuan Status & Progress Text
+      final statusText = note.isFinished ? "🍿 Finished" : "⏳ On-Going";
+      final progressText = "${note.episodeWatched}${note.totalEpisodes != null ? " / ${note.totalEpisodes}" : " Eps"}";
+      
+      // Visual Progress Bar (Emoji)
+      String progressBar = "";
+      if (note.totalEpisodes != null && note.totalEpisodes! > 0) {
+        const int totalTicks = 10;
+        int filledTicks = ((note.episodeWatched / note.totalEpisodes!) * totalTicks).round().clamp(0, totalTicks);
+        progressBar = "\n📊 Progress : " + "🟦" * filledTicks + "⬜" * (totalTicks - filledTicks);
+      }
+
+      // Template Teks (Tanpa Review/Content)
+      final shareText = '''
+    Detail Informasi Filim/Drama/Donghua 🚀
+
+    🎬 ${note.title.toUpperCase()} (${note.year})
+    ─────────────────────────
+    📌 Platform : ${note.media ?? "-"}
+    📺 Episode  : $progressText $progressBar
+    ✨ Status   : $statusText
+    ${note.overallRating != null ? "⭐ Rating   : ${note.overallRating!.toStringAsFixed(1)} / 5.0" : ""}
+
+    Dibagikan Melalui MyNotePlus ✨
+    ''';
+
+      Share.share(shareText, subject: 'Update Nonton: ${note.title}');
+    }
 
   void _confirmDelete(FilmNoteViewModel viewModel) {
     showDialog(
@@ -62,7 +82,7 @@ ${note.overallRating != null ? "⭐ Rating: ${note.overallRating!.toStringAsFixe
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
         title: const Text("Hapus Catatan?"),
-        content: const Text("Catatan film ini akan dihapus permanen."),
+        content: const Text("Catatan film/drama/donghua ini akan dihapus permanen."),
         actions: [
           TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
           TextButton(

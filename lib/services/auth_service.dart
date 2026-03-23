@@ -19,12 +19,21 @@ class AuthService {
     return cred;
   }
 
-  Future<UserCredential> loginWithEmail(String email, String password) async {
-    return await _auth.signInWithEmailAndPassword(
-      email: email,
-      password: password,
-    );
-  }
+    Future<UserCredential> loginWithEmail(String email, String password) async {
+      final cred = await _auth.signInWithEmailAndPassword(
+        email: email,
+        password: password,
+      );
+      final user = cred.user;
+      await user?.reload();
+      // 🔥 VALIDASI
+      if (user != null && !user.emailVerified) {
+        await _auth.signOut(); // biar gak masuk setengah login
+        throw Exception("Harap verifikasi email terlebih dahulu");
+      }
+
+      return cred;
+    }
 
   /// ✅ Login / Register dengan Google
 Future<UserCredential?> signInWithGoogle({required bool isRegister}) async {

@@ -23,37 +23,35 @@ class _AddNoteScreenState extends State<AddNoteScreen> {
     super.dispose();
   }
 
-  Future<bool> _onWillPop() async {
-    final hasText = titleController.text.trim().isNotEmpty ||
-        contentController.text.trim().isNotEmpty;
-
-    if (!hasText) return true;
-
-    final shouldExit = await showDialog<bool>(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text("Keluar tanpa menyimpan?"),
-        content: const Text(
-          "Anda telah menulis sesuatu. Apakah yakin ingin keluar tanpa menyimpannya?",
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text("Batal"),
-          ),
-          FilledButton(
-            onPressed: () => Navigator.of(context).pop(true),
-            style: FilledButton.styleFrom(
-              backgroundColor: Colors.redAccent.withValues(alpha: 0.9),
-            ),
-            child: const Text("Keluar"),
-          ),
-        ],
+Future<bool> _onWillPop() async {
+  // Hapus pengecekan 'hasText' di sini agar selalu muncul dialog
+  final shouldExit = await showDialog<bool>(
+    context: context,
+    builder: (context) => AlertDialog(
+      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+      title: const Text("Keluar dari Catatan?"),
+      content: const Text(
+        "Apakah Anda yakin ingin keluar? Perubahan yang belum disimpan akan hilang.",
       ),
-    );
+      actions: [
+        TextButton(
+          onPressed: () => Navigator.of(context).pop(false), // Tetap di sini
+          child: const Text("Tetap"),
+        ),
+        FilledButton(
+          onPressed: () => Navigator.of(context).pop(true), // Keluar
+          style: FilledButton.styleFrom(
+            backgroundColor: Colors.redAccent,
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          child: const Text("Keluar"),
+        ),
+      ],
+    ),
+  );
 
-    return shouldExit ?? false;
-  }
+  return shouldExit ?? false;
+}
 
   void _saveNote() {
     final viewModel = Provider.of<NoteViewModel>(context, listen: false);

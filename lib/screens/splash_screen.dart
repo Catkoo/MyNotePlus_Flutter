@@ -84,21 +84,37 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
 
     final user = FirebaseAuth.instance.currentUser;
     if (user != null) {
-      await user.reload();
-      final userDoc = await FirebaseFirestore.instance.collection('users').doc(user.uid).get();
+      try {
+        await user.reload();
+      } on FirebaseAuthException catch (e) {
+        if (e.code == 'user-not-found') {
+          // ✅ benar-benar dihapus
+          await handleAccountIssue(context, isDeleted: true);
+        } else if (e.code == 'user-disabled') {
+          // ✅ di-disable di Firebase Auth
+          await handleAccountIssue(context, isDeleted: false);
+        } else {
+          // ⚠️ error lain (jangan langsung logout!)
+          debugPrint('Reload error: ${e.code}');
+        }
+        return;
+      }
+
+      final userDoc = await FirebaseFirestore.instance
+          .collection('users')
+          .doc(user.uid)
+          .get();
+
       final isDisabled = userDoc.data()?['disabled'] ?? false;
 
       if (isDisabled) {
-        await FirebaseAuth.instance.signOut();
-        if (mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(content: Text('Akun Anda telah dinonaktifkan oleh admin')),
-          );
-          Navigator.pushReplacementNamed(context, '/login');
-        }
-      } else {
-        Navigator.pushReplacementNamed(context, '/home');
+        // 🚫 AKUN DISABLE
+        await handleAccountIssue(context, isDeleted: false);
+        return;
       }
+
+      // ✅ NORMAL
+      Navigator.pushReplacementNamed(context, '/home');
     } else {
       Navigator.pushReplacementNamed(context, '/login');
     }
@@ -230,16 +246,36 @@ class MaintenanceScreen extends StatelessWidget {
   }
 }
 
-Future<void> handleAccountDeletionSuccess(BuildContext context) async {
+Future<void> handleAccountIssue(
+  BuildContext context, {
+  required bool isDeleted,
+}) async {
   await FirebaseAuth.instance.signOut();
-  if (context.mounted) {
+
+  if (!context.mounted) return;
+
+  Navigator.pushNamedAndRemoveUntil(
+    context,
+    '/login',
+    (route) => false,
+  );
+
+  Future.delayed(const Duration(milliseconds: 300), () {
+    if (!context.mounted) return;
+
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: const Text('Pengajuan hapus akun berhasil. Terima kasih.'),
+        content: Text(
+          isDeleted
+              ? 'Akun Anda sudah tidak tersedia. Silakan hubungi admin jika ini kesalahan.'
+              : 'Akun Anda dinonaktifkan sementara. Silakan hubungi admin.',
+        ),
+        backgroundColor: isDeleted ? Colors.red : Colors.orange,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
       ),
     );
-    Navigator.pushReplacementNamed(context, '/login');
-  }
+  });
 }
