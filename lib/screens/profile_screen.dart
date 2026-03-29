@@ -163,7 +163,7 @@ class _ProfileScreenState extends State<ProfileScreen> {
                   _buildLogoutButton(theme),
                   
                   const SizedBox(height: 16),
-                  Text('Versi 1.0.8', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
+                  Text('Versi 1.0.8 (12)', style: theme.textTheme.bodySmall?.copyWith(color: Colors.grey)),
                   const SizedBox(height: 40),
                 ],
               ),

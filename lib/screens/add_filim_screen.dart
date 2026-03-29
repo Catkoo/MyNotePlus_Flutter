@@ -17,6 +17,9 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
   final _mediaController = TextEditingController();
   final _episodeController = TextEditingController(text: '1');
   final _totalEpisodeController = TextEditingController();
+  
+  // ✅ Tambahan untuk Coming Soon Date
+  DateTime? _selectedReleaseDate;
 
   // Data Platform untuk Grid Picker
   final List<Map<String, dynamic>> platformList = [
@@ -30,14 +33,14 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
     {'name': 'YouTube', 'icon': Icons.play_circle_filled_rounded},
   ];
 
-  final statusOptions = ['Belum selesai', 'Selesai'];
+  // ✅ Ditambah 'Coming Soon'
+  final statusOptions = ['Belum selesai', 'Selesai', 'Coming Soon'];
   String selectedStatus = 'Belum selesai';
 
   double _rating = 0.0;
   bool _mustRewatch = false;
   bool isSaving = false;
 
-  // Tampilan Platform Picker Grid
   void _showPlatformPicker() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -105,7 +108,6 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
         if (!isManual) {
           setState(() => _mediaController.text = name);
         }
-        // Jika manual, keyboard akan muncul otomatis karena TextField tidak diblokir lagi
       },
       borderRadius: BorderRadius.circular(20),
       child: Column(
@@ -140,14 +142,19 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
     final episode = int.tryParse(_episodeController.text.trim()) ?? 0;
     final totalEpisode = int.tryParse(_totalEpisodeController.text.trim());
 
-    if (title.isEmpty || year.isEmpty || episode == 0) {
+    if (title.isEmpty || year.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Judul, Tahun, dan Episode wajib diisi')),
+        const SnackBar(content: Text('Judul dan Tahun wajib diisi')),
       );
       return;
     }
 
     setState(() => isSaving = true);
+
+    // ✅ Konversi status UI ke String Model
+    String dbStatus = 'watching';
+    if (selectedStatus == 'Selesai') dbStatus = 'finished';
+    if (selectedStatus == 'Coming Soon') dbStatus = 'coming_soon';
 
     final currentUser = FirebaseAuth.instance.currentUser;
     final note = FilmNote(
@@ -155,13 +162,15 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
       title: title,
       year: year,
       media: media.isEmpty ? null : media,
-      episodeWatched: episode,
+      episodeWatched: selectedStatus == 'Coming Soon' ? 0 : episode,
       isFinished: selectedStatus == 'Selesai',
       ownerUid: currentUser?.uid ?? '',
       lastEdited: DateTime.now(),
       totalEpisodes: totalEpisode,
       overallRating: selectedStatus == 'Selesai' ? _rating : null,
       mustRewatch: selectedStatus == 'Selesai' ? _mustRewatch : null,
+      status: dbStatus, // ✅ Disimpan ke Firestore
+      nextEpisodeDate: _selectedReleaseDate, // ✅ Simpan tgl rilis jika ada
     );
 
     await FilmNoteViewModel().addFilmNote(note);
@@ -177,7 +186,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
             children: [
               Icon(Icons.check_circle, color: Colors.white),
               SizedBox(width: 8),
-              Text("Catatan film berhasil disimpan!"),
+              Text("Review berhasil ditambahkan!"),
             ],
           ),
         ),
@@ -189,11 +198,6 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
     final isEmpty =
         _titleController.text.trim().isEmpty &&
         _yearController.text.trim().isEmpty &&
-        _mediaController.text.trim().isEmpty &&
-        _episodeController.text.trim() == '1' &&
-        _totalEpisodeController.text.trim().isEmpty &&
-        _rating == 0.0 &&
-        !_mustRewatch &&
         selectedStatus == 'Belum selesai';
 
     if (isEmpty) return true;
@@ -202,17 +206,14 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
       context: context,
       builder: (context) => AlertDialog(
         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
-        title: const Text("Keluar tanpa menyimpan?"),
-        content: const Text("Data yang kamu isi belum disimpan."),
+        title: const Text("Batal simpan?"),
+        content: const Text("Data yang kamu isi akan hilang."),
         actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(false),
-            child: const Text("Lanjut"),
-          ),
+          TextButton(onPressed: () => Navigator.of(context).pop(false), child: const Text("Lanjut Isi")),
           TextButton(
             onPressed: () => Navigator.of(context).pop(true),
             style: TextButton.styleFrom(foregroundColor: Colors.red),
-            child: const Text("Keluar"),
+            child: const Text("Buang"),
           ),
         ],
       ),
@@ -231,9 +232,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
       onPopInvokedWithResult: (didPop, result) async {
         if (didPop) return; 
         final canExit = await _onWillPop();
-        if (canExit && context.mounted) {
-          Navigator.of(context).pop(); 
-        }
+        if (canExit && context.mounted) Navigator.of(context).pop(); 
       },
       child: Scaffold(
         backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF5F7FA),
@@ -262,7 +261,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
           child: Column(
             crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              _buildSectionTitle("🎬 Detail Informasi"),
+              _buildSectionTitle("🎬 DETAIL INFORMASI"),
               const SizedBox(height: 12),
               _buildModernTextField(
                 controller: _titleController,
@@ -288,39 +287,15 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                       label: "Platform",
                       icon: Icons.connected_tv_rounded,
                       textCapitalization: TextCapitalization.words,
-                      hint: "Klik pilih",
-                      onTap: _showPlatformPicker, // Trigger menu tapi tetap bisa diketik
+                      hint: "Pilih",
+                      onTap: _showPlatformPicker,
                     ),
                   ),
                 ],
               ),
-              const SizedBox(height: 32),
-              _buildSectionTitle("📺 PROGRES NONTON"),
+              const SizedBox(height: 24),
+              _buildSectionTitle("🚦 STATUS"),
               const SizedBox(height: 12),
-              Row(
-                children: [
-                  Expanded(
-                    child: _buildModernTextField(
-                      controller: _episodeController,
-                      label: "Eps Saat Ini",
-                      icon: Icons.play_circle_fill_rounded,
-                      keyboardType: TextInputType.number,
-                    ),
-                  ),
-                  const SizedBox(width: 16),
-                  Expanded(
-                    child: _buildModernTextField(
-                      controller: _totalEpisodeController,
-                      label: "Total Eps",
-                      icon: Icons.list_alt_rounded,
-                      keyboardType: TextInputType.number,
-                      hint: "Opsional",
-                    ),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 20),
-              // Status Switcher
               Container(
                 padding: const EdgeInsets.all(4),
                 decoration: BoxDecoration(
@@ -344,6 +319,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                             status,
                             textAlign: TextAlign.center,
                             style: TextStyle(
+                              fontSize: 12,
                               fontWeight: FontWeight.bold,
                               color: selected ? Colors.white : Colors.grey,
                             ),
@@ -354,9 +330,66 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                   }).toList(),
                 ),
               ),
-              const SizedBox(height: 32),
-              // Rating & Rewatch Section (Hanya muncul jika selesai)
+              const SizedBox(height: 24),
+
+              // ✅ Progres Nonton: Muncul jika BUKAN Coming Soon
+              if (selectedStatus != 'Coming Soon') ...[
+                _buildSectionTitle("📺 PROGRES NONTON"),
+                const SizedBox(height: 12),
+                Row(
+                  children: [
+                    Expanded(
+                      child: _buildModernTextField(
+                        controller: _episodeController,
+                        label: "Eps Saat Ini",
+                        icon: Icons.play_circle_fill_rounded,
+                        keyboardType: TextInputType.number,
+                      ),
+                    ),
+                    const SizedBox(width: 16),
+                    Expanded(
+                      child: _buildModernTextField(
+                        controller: _totalEpisodeController,
+                        label: "Total Eps",
+                        icon: Icons.list_alt_rounded,
+                        keyboardType: TextInputType.number,
+                        hint: "Opsional",
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+
+              // ✅ Tanggal Rilis: Muncul jika Coming Soon
+              if (selectedStatus == 'Coming Soon') ...[
+                _buildSectionTitle("📅 RENCANA TAYANG"),
+                const SizedBox(height: 12),
+                _buildModernTextField(
+                  controller: TextEditingController(
+                    text: _selectedReleaseDate == null 
+                      ? "" 
+                      : "${_selectedReleaseDate!.day}/${_selectedReleaseDate!.month}/${_selectedReleaseDate!.year}"
+                  ),
+                  label: "Tanggal Rilis",
+                  icon: Icons.event_repeat_rounded,
+                  hint: "Klik untuk pilih tanggal",
+                  onTap: () async {
+                    DateTime? pickedDate = await showDatePicker(
+                      context: context,
+                      initialDate: DateTime.now(),
+                      firstDate: DateTime.now(),
+                      lastDate: DateTime(2100),
+                    );
+                    if (pickedDate != null) {
+                      setState(() => _selectedReleaseDate = pickedDate);
+                    }
+                  },
+                ),
+              ],
+
+              // ✅ Rating: Muncul jika Selesai
               if (selectedStatus == 'Selesai') ...[
+                const SizedBox(height: 32),
                 _buildSectionTitle("⭐ PENILAIAN"),
                 const SizedBox(height: 12),
                 Container(
@@ -400,8 +433,8 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
                   ),
                 ),
               ],
+              
               const SizedBox(height: 40),
-              // Tombol Simpan
               Container(
                 width: double.infinity,
                 height: 60,
@@ -445,7 +478,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
     return Text(
       title,
       style: const TextStyle(
-        fontSize: 12,
+        fontSize: 11,
         fontWeight: FontWeight.w900,
         letterSpacing: 1.2,
         color: Colors.grey,
@@ -471,6 +504,7 @@ class _AddFilmNoteScreenState extends State<AddFilmNoteScreen> {
       child: TextField(
         controller: controller,
         onTap: onTap,
+        readOnly: onTap != null, // Biar ga muncul keyboard kalau cuma buat pilih tgl/platform
         keyboardType: keyboardType,
         textCapitalization: textCapitalization,
         style: const TextStyle(fontWeight: FontWeight.w600),

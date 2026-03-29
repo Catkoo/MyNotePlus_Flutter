@@ -13,9 +13,13 @@ class FilmNote {
   final DateTime? nextEpisodeDate;
   final int? totalEpisodes;
 
-  // ✅ Tambahan baru
+  // ✅ Field Tambahan sebelumnya
   final double? overallRating;
   final bool? mustRewatch;
+
+  // ✅ Field Baru untuk Filter
+  // Status bisa berisi: 'watching', 'finished', 'coming_soon'
+  final String status; 
 
   FilmNote({
     required this.id,
@@ -31,9 +35,9 @@ class FilmNote {
     this.totalEpisodes,
     this.overallRating,
     this.mustRewatch,
+    this.status = 'watching', // Default awal
   });
 
-  /// Konversi dari Firestore ke objek
   factory FilmNote.fromMap(Map<String, dynamic> data, String id) {
     return FilmNote(
       id: id,
@@ -53,10 +57,10 @@ class FilmNote {
       totalEpisodes: data['totalEpisodes'],
       overallRating: (data['overallRating'] as num?)?.toDouble(),
       mustRewatch: data['mustRewatch'],
+      status: data['status'] ?? 'watching', // Ambil status dari Firestore
     );
   }
 
-  /// Konversi ke Firestore
   Map<String, dynamic> toMap() {
     return {
       'title': title,
@@ -71,10 +75,10 @@ class FilmNote {
       'totalEpisodes': totalEpisodes,
       'overallRating': overallRating,
       'mustRewatch': mustRewatch,
+      'status': status, // Simpan status ke Firestore
     };
   }
 
-  /// Untuk duplikasi saat update
   FilmNote copyWith({
     String? id,
     String? title,
@@ -89,6 +93,7 @@ class FilmNote {
     int? totalEpisodes,
     double? overallRating,
     bool? mustRewatch,
+    String? status,
   }) {
     return FilmNote(
       id: id ?? this.id,
@@ -104,6 +109,7 @@ class FilmNote {
       totalEpisodes: totalEpisodes ?? this.totalEpisodes,
       overallRating: overallRating ?? this.overallRating,
       mustRewatch: mustRewatch ?? this.mustRewatch,
+      status: status ?? this.status,
     );
   }
 }

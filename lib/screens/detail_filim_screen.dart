@@ -43,38 +43,56 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
     return "$day/$month/$year • $hour:$minute";
   }
 
-    void shareNote() {
-      if (filmNote == null) return;
-      final note = filmNote!;
-      
-      // Penentuan Status & Progress Text
-      final statusText = note.isFinished ? "🍿 Finished" : "⏳ On-Going";
-      final progressText = "${note.episodeWatched}${note.totalEpisodes != null ? " / ${note.totalEpisodes}" : " Eps"}";
-      
-      // Visual Progress Bar (Emoji)
-      String progressBar = "";
-      if (note.totalEpisodes != null && note.totalEpisodes! > 0) {
-        const int totalTicks = 10;
-        int filledTicks = ((note.episodeWatched / note.totalEpisodes!) * totalTicks).round().clamp(0, totalTicks);
-        progressBar = "\n📊 Progress : " + "🟦" * filledTicks + "⬜" * (totalTicks - filledTicks);
-      }
+  // ✅ Fungsi Format Tanggal Tanpa Jam (Untuk Coming Soon)
+  String formatOnlyDate(DateTime date) {
+    final day = date.day.toString().padLeft(2, '0');
+    final month = date.month.toString().padLeft(2, '0');
+    final year = date.year.toString();
+    return "$day/$month/$year";
+  }
 
-      // Template Teks (Tanpa Review/Content)
-      final shareText = '''
-    Detail Informasi Filim/Drama/Donghua 🚀
+  void shareNote() {
+    if (filmNote == null) return;
+    final note = filmNote!;
+    
+    // Penentuan Status & Progress Text
+    String statusText = note.isFinished ? "🍿 Finished" : "⏳ On-Going";
+    if (note.status == 'coming_soon') statusText = "📅 Coming Soon";
 
-    🎬 ${note.title.toUpperCase()} (${note.year})
-    ─────────────────────────
-    📌 Platform : ${note.media ?? "-"}
-    📺 Episode  : $progressText $progressBar
-    ✨ Status   : $statusText
-    ${note.overallRating != null ? "⭐ Rating   : ${note.overallRating!.toStringAsFixed(1)} / 5.0" : ""}
-
-    Dibagikan Melalui MyNotePlus ✨
-    ''';
-
-      Share.share(shareText, subject: 'Update Nonton: ${note.title}');
+    final progressText = note.status == 'coming_soon' 
+        ? "Belum Tayang" 
+        : "${note.episodeWatched}${note.totalEpisodes != null ? " / ${note.totalEpisodes}" : " Eps"}";
+    
+    // Visual Progress Bar (Emoji) - Hanya jika bukan coming soon
+    String progressBar = "";
+    if (note.status != 'coming_soon' && note.totalEpisodes != null && note.totalEpisodes! > 0) {
+      const int totalTicks = 10;
+      int filledTicks = ((note.episodeWatched / note.totalEpisodes!) * totalTicks).round().clamp(0, totalTicks);
+      progressBar = "\n📊 Progress : " + "🟦" * filledTicks + "⬜" * (totalTicks - filledTicks);
     }
+
+    // ✅ Tambahan info rilis di share text
+    String releaseInfo = "";
+    if (note.status == 'coming_soon' && note.nextEpisodeDate != null) {
+      releaseInfo = "\n📅 Rilis : ${formatOnlyDate(note.nextEpisodeDate!)}";
+    }
+
+    // Template Teks
+    final shareText = '''
+Detail Informasi Film/Drama/Donghua 🚀
+
+🎬 ${note.title.toUpperCase()} (${note.year})
+─────────────────────────
+📌 Platform : ${note.media ?? "-"}
+📺 Episode  : $progressText $progressBar $releaseInfo
+✨ Status   : $statusText
+${note.overallRating != null ? "⭐ Rating   : ${note.overallRating!.toStringAsFixed(1)} / 5.0" : ""}
+
+Dibagikan Melalui MyNotePlus ✨
+''';
+
+    Share.share(shareText, subject: 'Update Nonton: ${note.title}');
+  }
 
   void _confirmDelete(FilmNoteViewModel viewModel) {
     showDialog(
@@ -88,8 +106,8 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
           TextButton(
             onPressed: () {
               viewModel.deleteNote(filmNote!.id);
-              Navigator.pop(context); // Tutup dialog
-              Navigator.pop(context); // Kembali ke list
+              Navigator.pop(context); 
+              Navigator.pop(context); 
             },
             style: TextButton.styleFrom(foregroundColor: Colors.red),
             child: const Text("Hapus"),
@@ -123,6 +141,17 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
 
     final note = filmNote!;
     final lastEdited = formatSimpleDate(note.lastEdited);
+
+    // ✅ Logic Penentuan Warna Status
+    Color statusColor = note.isFinished ? Colors.green : Colors.orange;
+    String statusLabel = note.isFinished ? "Selesai" : "Sedang Berjalan";
+    IconData statusIcon = note.isFinished ? Icons.check_circle_rounded : Icons.pending_rounded;
+
+    if (note.status == 'coming_soon') {
+      statusColor = Colors.blue;
+      statusLabel = "Coming Soon";
+      statusIcon = Icons.auto_awesome_rounded;
+    }
 
     return Scaffold(
       backgroundColor: isDark ? const Color(0xFF0F0F0F) : const Color(0xFFF5F7FA),
@@ -159,7 +188,6 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            // --- Header Title ---
             const SizedBox(height: 10),
             Text(
               note.title.toUpperCase(),
@@ -172,10 +200,10 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
             const SizedBox(height: 8),
             Row(
               children: [
-                _buildBadge(note.year, theme.colorScheme.primary.withValues(alpha: 0.1), theme.colorScheme.primary),
+                _buildBadge(note.year, theme.colorScheme.primary.withOpacity(0.1), theme.colorScheme.primary),
                 const SizedBox(width: 8),
                 if (note.media != null)
-                  _buildBadge(note.media!, Colors.grey.withValues(alpha: 0.1), Colors.grey),
+                  _buildBadge(note.media!, Colors.grey.withOpacity(0.1), Colors.grey),
               ],
             ),
             const SizedBox(height: 24),
@@ -184,12 +212,12 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
             Container(
               padding: const EdgeInsets.all(20),
               decoration: BoxDecoration(
-                color: isDark ? Colors.white.withValues(alpha: 0.05) : Colors.white,
+                color: isDark ? Colors.white.withOpacity(0.05) : Colors.white,
                 borderRadius: BorderRadius.circular(24),
                 boxShadow: [
                   if (!isDark)
                     BoxShadow(
-                      color: Colors.black.withValues(alpha: 0.03),
+                      color: Colors.black.withOpacity(0.03),
                       blurRadius: 20,
                       offset: const Offset(0, 10),
                     )
@@ -200,24 +228,27 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
                   _buildInfoRow(
                     Icons.movie_creation_outlined,
                     "Status Nonton",
-                    note.isFinished ? "Selesai" : "Sedang Berjalan",
-                    trailing: Icon(
-                      note.isFinished ? Icons.check_circle_rounded : Icons.pending_rounded,
-                      color: note.isFinished ? Colors.green : Colors.orange,
+                    statusLabel,
+                    trailing: Icon(statusIcon, color: statusColor),
+                  ),
+                  
+                  // Tampilkan Progress jika BUKAN Coming Soon
+                  if (note.status != 'coming_soon') ...[
+                    const Divider(height: 32),
+                    _buildInfoRow(
+                      Icons.theater_comedy_outlined,
+                      "Progres Episode",
+                      "${note.episodeWatched} ${note.totalEpisodes != null ? "/ ${note.totalEpisodes}" : "Eps"}",
                     ),
-                  ),
-                  const Divider(height: 32),
-                  _buildInfoRow(
-                    Icons. theater_comedy_outlined,
-                    "Progres Episode",
-                    "${note.episodeWatched} ${note.totalEpisodes != null ? "/ ${note.totalEpisodes}" : "Eps"}",
-                  ),
+                  ],
+
+                  // Tampilkan Jadwal jika Coming Soon atau ada Next Date
                   if (note.nextEpisodeDate != null) ...[
                     const Divider(height: 32),
                     _buildInfoRow(
-                      Icons.schedule_rounded,
-                      "Jadwal Berikutnya",
-                      formatSimpleDate(note.nextEpisodeDate!),
+                      note.status == 'coming_soon' ? Icons.event_available_rounded : Icons.schedule_rounded,
+                      note.status == 'coming_soon' ? "Tanggal Rilis" : "Jadwal Berikutnya",
+                      formatOnlyDate(note.nextEpisodeDate!),
                     ),
                   ],
                 ],
@@ -226,7 +257,7 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
 
             const SizedBox(height: 20),
 
-            // --- Rating Section (If Finished) ---
+            // --- Rating Section ---
             if (note.isFinished && note.overallRating != null)
               Container(
                 padding: const EdgeInsets.all(20),
@@ -302,20 +333,21 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
         Container(
           padding: const EdgeInsets.all(8),
           decoration: BoxDecoration(
-            color: Colors.grey.withValues(alpha: 0.1),
+            color: Colors.grey.withOpacity(0.1),
             borderRadius: BorderRadius.circular(10),
           ),
           child: Icon(icon, size: 20, color: Colors.grey),
         ),
         const SizedBox(width: 16),
-        Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
-            Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15)),
-          ],
+        Expanded(
+          child: Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(label, style: const TextStyle(color: Colors.grey, fontSize: 12)),
+              Text(value, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 15), overflow: TextOverflow.ellipsis),
+            ],
+          ),
         ),
-        const Spacer(),
         if (trailing != null) trailing,
       ],
     );
@@ -325,9 +357,9 @@ class _DetailFilmNoteScreenState extends State<DetailFilmNoteScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
       decoration: BoxDecoration(
-        color: Colors.amber.withValues(alpha: 0.1),
+        color: Colors.amber.withOpacity(0.1),
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.amber.withValues(alpha: 0.3)),
+        border: Border.all(color: Colors.amber.withOpacity(0.3)),
       ),
       child: const Row(
         children: [

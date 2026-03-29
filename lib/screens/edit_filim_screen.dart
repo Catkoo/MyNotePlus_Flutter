@@ -18,6 +18,9 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
   final _episodeController = TextEditingController();
   final _totalEpisodeController = TextEditingController();
 
+  // ✅ Tambahan untuk Coming Soon Date
+  DateTime? _selectedReleaseDate;
+
   // Data Platform untuk Grid Picker
   final List<Map<String, dynamic>> platformList = [
     {'name': 'Netflix', 'icon': Icons.movie_filter_rounded},
@@ -30,7 +33,8 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
     {'name': 'YouTube', 'icon': Icons.play_circle_filled_rounded},
   ];
 
-  final statusOptions = ['Belum selesai', 'Selesai'];
+  // ✅ Ditambah 'Coming Soon'
+  final statusOptions = ['Belum selesai', 'Selesai', 'Coming Soon'];
   String selectedStatus = 'Belum selesai';
 
   double _rating = 0.0;
@@ -58,9 +62,17 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
         _mediaController.text = note.media ?? '';
         _episodeController.text = note.episodeWatched.toString();
         _totalEpisodeController.text = note.totalEpisodes?.toString() ?? '';
-        selectedStatus = note.isFinished ? 'Selesai' : 'Belum selesai';
+        
+        // ✅ Mapping status dari DB ke UI
+        if (note.status == 'coming_soon') {
+          selectedStatus = 'Coming Soon';
+        } else {
+          selectedStatus = note.isFinished ? 'Selesai' : 'Belum selesai';
+        }
+
         _rating = note.overallRating ?? 0.0;
         _mustRewatch = note.mustRewatch ?? false;
+        _selectedReleaseDate = note.nextEpisodeDate;
         isLoading = false;
       });
     } else {
@@ -68,7 +80,31 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
     }
   }
 
-  // Tampilan Platform Picker Grid (Sama seperti halaman Add)
+  // ✅ Fungsi validasi pindah ke Coming Soon
+  void _handleStatusChange(String newStatus) async {
+    if (newStatus == 'Coming Soon' && selectedStatus != 'Coming Soon') {
+      final confirm = await showDialog<bool>(
+        context: context,
+        builder: (context) => AlertDialog(
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: const Text("Pindah ke Coming Soon?"),
+          content: const Text("Data progres nonton atau rating Anda tidak akan ditampilkan jika pindah ke status ini. Yakin?"),
+          actions: [
+            TextButton(onPressed: () => Navigator.pop(context, false), child: const Text("Batal")),
+            TextButton(
+              onPressed: () => Navigator.pop(context, true),
+              style: TextButton.styleFrom(foregroundColor: Colors.orange),
+              child: const Text("Ya, Pindahkan"),
+            ),
+          ],
+        ),
+      );
+      if (confirm == true) setState(() => selectedStatus = newStatus);
+    } else {
+      setState(() => selectedStatus = newStatus);
+    }
+  }
+
   void _showPlatformPicker() {
     final theme = Theme.of(context);
     final isDark = theme.brightness == Brightness.dark;
@@ -177,19 +213,26 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
 
     setState(() => isSaving = true);
 
+    // ✅ Konversi status UI ke String Model
+    String dbStatus = 'watching';
+    if (selectedStatus == 'Selesai') dbStatus = 'finished';
+    if (selectedStatus == 'Coming Soon') dbStatus = 'coming_soon';
+
     final currentUser = FirebaseAuth.instance.currentUser;
     final updatedNote = FilmNote(
       id: _currentNote!.id,
       title: title,
       year: year,
       media: media.isEmpty ? null : media,
-      episodeWatched: episode,
+      episodeWatched: selectedStatus == 'Coming Soon' ? 0 : episode,
       isFinished: selectedStatus == 'Selesai',
       ownerUid: currentUser?.uid ?? '',
       lastEdited: DateTime.now(),
       totalEpisodes: totalEpisode,
       overallRating: selectedStatus == 'Selesai' ? _rating : null,
       mustRewatch: selectedStatus == 'Selesai' ? _mustRewatch : null,
+      status: dbStatus,
+      nextEpisodeDate: _selectedReleaseDate,
     );
 
     await FilmNoteViewModel().updateFilmNote(updatedNote);
@@ -213,9 +256,10 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
         _mediaController.text.trim() != (_currentNote!.media ?? '') ||
         _episodeController.text.trim() != _currentNote!.episodeWatched.toString() ||
         _totalEpisodeController.text.trim() != (_currentNote!.totalEpisodes?.toString() ?? '') ||
-        selectedStatus != (_currentNote!.isFinished ? 'Selesai' : 'Belum selesai') ||
+        selectedStatus != (_currentNote!.status == 'coming_soon' ? 'Coming Soon' : (_currentNote!.isFinished ? 'Selesai' : 'Belum selesai')) ||
         _rating != (_currentNote!.overallRating ?? 0.0) ||
-        _mustRewatch != (_currentNote!.mustRewatch ?? false);
+        _mustRewatch != (_currentNote!.mustRewatch ?? false) ||
+        _selectedReleaseDate != _currentNote!.nextEpisodeDate;
   }
 
   Future<bool> _onWillPop() async {
@@ -297,22 +341,56 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
                         ],
                       ),
                     ),
+
+                    // ✅ Status Selector (3 Opsi)
                     _buildSectionCard(
-                      "📺 PROGRES NONTON",
-                      Column(
-                        children: [
-                          Row(
-                            children: [
-                              Expanded(child: _buildModernField(_episodeController, "Eps Ditonton", Icons.play_circle_fill_rounded, isNum: true)),
-                              const SizedBox(width: 12),
-                              Expanded(child: _buildModernField(_totalEpisodeController, "Total Eps", Icons.list_alt_rounded, isNum: true)),
-                            ],
-                          ),
-                          const SizedBox(height: 20),
-                          _buildStatusSelector(theme),
-                        ],
-                      ),
+                      "🚦 STATUS",
+                      _buildStatusSelector(theme),
                     ),
+
+                    // ✅ Progres Nonton: Muncul jika BUKAN Coming Soon
+                    if (selectedStatus != 'Coming Soon')
+                      _buildSectionCard(
+                        "📺 PROGRES NONTON",
+                        Column(
+                          children: [
+                            Row(
+                              children: [
+                                Expanded(child: _buildModernField(_episodeController, "Eps Ditonton", Icons.play_circle_fill_rounded, isNum: true)),
+                                const SizedBox(width: 12),
+                                Expanded(child: _buildModernField(_totalEpisodeController, "Total Eps", Icons.list_alt_rounded, isNum: true)),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+
+                    // ✅ Tanggal Rilis: Muncul jika Coming Soon
+                    if (selectedStatus == 'Coming Soon')
+                      _buildSectionCard(
+                        "📅 RENCANA TAYANG",
+                        _buildModernField(
+                          TextEditingController(
+                            text: _selectedReleaseDate == null 
+                              ? "" 
+                              : "${_selectedReleaseDate!.day}/${_selectedReleaseDate!.month}/${_selectedReleaseDate!.year}"
+                          ),
+                          "Tanggal Rilis",
+                          Icons.event_repeat_rounded,
+                          hint: "Klik pilih tanggal",
+                          onTap: () async {
+                            DateTime? pickedDate = await showDatePicker(
+                              context: context,
+                              initialDate: _selectedReleaseDate ?? DateTime.now(),
+                              firstDate: DateTime.now().subtract(const Duration(days: 365)),
+                              lastDate: DateTime(2100),
+                            );
+                            if (pickedDate != null) setState(() => _selectedReleaseDate = pickedDate);
+                          },
+                        ),
+                      ),
+
+                    // ✅ Review: Muncul jika Selesai
                     if (selectedStatus == 'Selesai')
                       _buildSectionCard(
                         "⭐ REVIEW & RATING",
@@ -344,6 +422,7 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
                           ],
                         ),
                       ),
+                    
                     const SizedBox(height: 32),
                     _buildSaveButton(theme),
                     const SizedBox(height: 40),
@@ -354,57 +433,43 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
     );
   }
 
-      Widget _buildModernField(
-        TextEditingController controller, 
-        String label, 
-        IconData icon, {
-        bool isNum = false, 
-        VoidCallback? onTap, 
-        String? hint
-      }) {
-        final isDark = Theme.of(context).brightness == Brightness.dark;
-        
-        return Container(
-          margin: const EdgeInsets.only(top: 8), // Biar ada jarak dikit dari label atas
-          child: TextField(
-            controller: controller,
-            onTap: onTap,
-            keyboardType: isNum ? TextInputType.number : TextInputType.text,
-            textCapitalization: TextCapitalization.words,
-            onChanged: (_) => setState(() {}),
-            style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
-            decoration: InputDecoration(
-              labelText: label,
-              hintText: hint,
-              prefixIcon: Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
-              
-              // Warna background input
-              filled: true,
-              fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
-              
-              // Border saat TIDAK diklik (Garis halus)
-              enabledBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: isDark ? Colors.white10 : Colors.black.withOpacity(0.1),
-                  width: 1.5,
-                ),
-              ),
-              
-              // Border saat DIKLIK/FOKUS (Garis lebih tegas)
-              focusedBorder: OutlineInputBorder(
-                borderRadius: BorderRadius.circular(16),
-                borderSide: BorderSide(
-                  color: Theme.of(context).colorScheme.primary,
-                  width: 2,
-                ),
-              ),
-              
-              contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
-            ),
+  Widget _buildModernField(
+    TextEditingController controller, 
+    String label, 
+    IconData icon, {
+    bool isNum = false, 
+    VoidCallback? onTap, 
+    String? hint
+  }) {
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+    return Container(
+      margin: const EdgeInsets.only(top: 8),
+      child: TextField(
+        controller: controller,
+        onTap: onTap,
+        readOnly: onTap != null,
+        keyboardType: isNum ? TextInputType.number : TextInputType.text,
+        textCapitalization: TextCapitalization.words,
+        style: const TextStyle(fontWeight: FontWeight.w600, fontSize: 16),
+        decoration: InputDecoration(
+          labelText: label,
+          hintText: hint,
+          prefixIcon: Icon(icon, size: 22, color: Theme.of(context).colorScheme.primary),
+          filled: true,
+          fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[50],
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.black.withOpacity(0.1), width: 1.5),
           ),
-        );
-      }
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(16),
+            borderSide: BorderSide(color: Theme.of(context).colorScheme.primary, width: 2),
+          ),
+          contentPadding: const EdgeInsets.symmetric(vertical: 18, horizontal: 20),
+        ),
+      ),
+    );
+  }
 
   Widget _buildStatusSelector(ThemeData theme) {
     return Container(
@@ -418,7 +483,7 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
           final isSelected = selectedStatus == status;
           return Expanded(
             child: GestureDetector(
-              onTap: () => setState(() => selectedStatus = status),
+              onTap: () => _handleStatusChange(status), // ✅ Pake handle function buat warning
               child: AnimatedContainer(
                 duration: const Duration(milliseconds: 250),
                 padding: const EdgeInsets.symmetric(vertical: 12),
@@ -429,7 +494,11 @@ class _EditFilmNoteScreenState extends State<EditFilmNoteScreen> {
                 child: Center(
                   child: Text(
                     status,
-                    style: TextStyle(color: isSelected ? Colors.white : Colors.grey, fontWeight: FontWeight.bold),
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: isSelected ? Colors.white : Colors.grey, 
+                      fontWeight: FontWeight.bold
+                    ),
                   ),
                 ),
               ),

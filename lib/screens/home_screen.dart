@@ -963,94 +963,108 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
   }
 }
 
-class FilmNotesContent extends StatefulWidget {
-  const FilmNotesContent({super.key});
+  class FilmNotesContent extends StatefulWidget {
+    const FilmNotesContent({super.key});
 
-  @override
-  State<FilmNotesContent> createState() => _FilmNotesContentState();
-}
-
-class _FilmNotesContentState extends State<FilmNotesContent> {
-  final TextEditingController _searchController = TextEditingController();
-  String _searchQuery = "";
-
-  void _showFilmNoteOptions(BuildContext context, FilmNote note) {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return SafeArea(
-          child: Column(
-            mainAxisSize: MainAxisSize.min,
-            children: [
-              ListTile(
-                leading: Icon(
-                  note.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
-                ),
-                title: Text(note.isPinned ? 'Lepas Pin' : 'Pin Catatan'),
-                onTap: () {
-                  Provider.of<FilmNoteViewModel>(
-                    context,
-                    listen: false,
-                  ).togglePin(note.id, !note.isPinned);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: const Icon(Icons.delete),
-                title: const Text('Hapus Catatan'),
-                onTap: () {
-                  Provider.of<FilmNoteViewModel>(
-                    context,
-                    listen: false,
-                  ).deleteNote(note.id);
-                  Navigator.pop(context);
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.close),
-                title: const Text('Batal'),
-                onTap: () => Navigator.pop(context),
-              ),
-            ],
-          ),
-        );
-      },
-    );
+    @override
+    State<FilmNotesContent> createState() => _FilmNotesContentState();
   }
 
-  @override
-  Widget build(BuildContext context) {
-    final theme = Theme.of(context);
-    final isDark = theme.brightness == Brightness.dark;
+  class _FilmNotesContentState extends State<FilmNotesContent> {
+    final TextEditingController _searchController = TextEditingController();
+    String _searchQuery = "";
+    String _selectedStatus = "Semua"; // State untuk filter status
 
-    return Consumer<FilmNoteViewModel>(
-      builder: (context, viewModel, _) {
-        final allNotes = viewModel.filmNotes;
-        final filteredNotes =
-            allNotes
-                .where(
-                  (note) => note.title.toLowerCase().contains(
-                    _searchQuery.toLowerCase(),
+    void _showFilmNoteOptions(BuildContext context, FilmNote note) {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+        ),
+        builder: (_) {
+          return SafeArea(
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                ListTile(
+                  leading: Icon(
+                    note.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
                   ),
-                )
-                .toList()
-              ..sort((a, b) {
-                if (a.isPinned != b.isPinned) {
-                  return b.isPinned ? 1 : -1;
-                }
-                return b.lastEdited.compareTo(a.lastEdited);
-              });
+                  title: Text(note.isPinned ? 'Lepas Pin' : 'Pin Catatan'),
+                  onTap: () {
+                    Provider.of<FilmNoteViewModel>(
+                      context,
+                      listen: false,
+                    ).togglePin(note.id, !note.isPinned);
+                    Navigator.pop(context);
+                  },
+                ),
+                ListTile(
+                  leading: const Icon(Icons.delete, color: Colors.red),
+                  title: const Text('Hapus Catatan', style: TextStyle(color: Colors.red)),
+                  onTap: () {
+                    Provider.of<FilmNoteViewModel>(
+                      context,
+                      listen: false,
+                    ).deleteNote(note.id);
+                    Navigator.pop(context);
+                  },
+                ),
+                const Divider(),
+                ListTile(
+                  leading: const Icon(Icons.close),
+                  title: const Text('Batal'),
+                  onTap: () => Navigator.pop(context),
+                ),
+              ],
+            ),
+          );
+        },
+      );
+    }
 
-        return Column(
-          children: [
-            // 🔍 Search
-            Padding(
-              padding: const EdgeInsets.all(16),
-              child: TextField(
+    @override
+    Widget build(BuildContext context) {
+      final theme = Theme.of(context);
+      final isDark = theme.brightness == Brightness.dark;
+
+      return Consumer<FilmNoteViewModel>(
+        builder: (context, viewModel, _) {
+          final allNotes = viewModel.filmNotes;
+          
+          // --- LOGIC FILTER & SEARCH ---
+          final filteredNotes = allNotes.where((note) {
+            final matchesSearch = note.title.toLowerCase().contains(_searchQuery.toLowerCase());
+            
+            if (_selectedStatus == "Semua") return matchesSearch;
+            if (_selectedStatus == "Coming Soon") {
+              return matchesSearch && note.status == 'coming_soon';
+            }
+            if (_selectedStatus == "On-Going") {
+              return matchesSearch && !note.isFinished && note.status != 'coming_soon';
+            }
+            if (_selectedStatus == "Selesai") {
+              return matchesSearch && note.isFinished;
+            }
+            return matchesSearch;
+          }).toList()
+            ..sort((a, b) {
+              // 1. Prioritas Pin
+              if (a.isPinned != b.isPinned) return b.isPinned ? 1 : -1;
+              // 2. Prioritas Coming Soon (Setelah Pin)
+              bool aIsCS = a.status == 'coming_soon';
+              bool bIsCS = b.status == 'coming_soon';
+              if (aIsCS != bIsCS) return aIsCS ? -1 : 1;
+              // 3. Terakhir Diperbarui
+              return b.lastEdited.compareTo(a.lastEdited);
+            });
+
+          return Column(
+            children: [
+              // 🔍 Search Bar
+              Padding(
+                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                child: TextField(
                   controller: _searchController,
                   onChanged: (value) => setState(() => _searchQuery = value),
                   decoration: InputDecoration(
@@ -1061,196 +1075,237 @@ class _FilmNotesContentState extends State<FilmNotesContent> {
                     fillColor: isDark ? Colors.grey[900] : Colors.grey[100],
                     contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
                     border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16), // Kotak melengkung modern
-                      borderSide: BorderSide.none,
-                    ),
-                    enabledBorder: OutlineInputBorder(
                       borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide(color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05)),
+                      borderSide: BorderSide.none,
                     ),
                   ),
                 ),
-            ),
+              ),
 
-            // 🎬 Film Notes Grid
-            Expanded(
-              child: filteredNotes.isEmpty
-                  ? Column(
-                            mainAxisAlignment: MainAxisAlignment.center,
-                            children: [
-                              Container(
-                                padding: const EdgeInsets.all(32),
-                                decoration: BoxDecoration(
-                                  color: theme.colorScheme.primary.withOpacity(0.05),
-                                  shape: BoxShape.circle,
-                                ),
-                                child: Icon(
-                                  Icons.movie_filter_rounded,
-                                  size: 80,
-                                  color: theme.colorScheme.primary.withOpacity(0.4),
+              // ⚡ Filter Chips
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Row(
+                  children: ["Semua", "Coming Soon", "On-Going", "Selesai"].map((status) {
+                    final isSelected = _selectedStatus == status;
+                    return Padding(
+                      padding: const EdgeInsets.only(right: 8),
+                      child: ChoiceChip(
+                        label: Text(status),
+                        selected: isSelected,
+                        onSelected: (bool selected) {
+                          setState(() => _selectedStatus = status);
+                        },
+                        selectedColor: theme.colorScheme.primary.withOpacity(0.2),
+                        backgroundColor: isDark ? Colors.white10 : Colors.grey[100],
+                        labelStyle: TextStyle(
+                          fontSize: 12,
+                          fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                          color: isSelected 
+                              ? theme.colorScheme.primary 
+                              : (isDark ? Colors.white70 : Colors.black54),
+                        ),
+                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                        side: BorderSide(
+                          color: isSelected ? theme.colorScheme.primary : Colors.transparent,
+                        ),
+                        showCheckmark: false,
+                      ),
+                    );
+                  }).toList(),
+                ),
+              ),
+
+              // 🎬 Film Notes Grid
+              Expanded(
+                child: filteredNotes.isEmpty
+                    ? _buildEmptyState(theme, isDark)
+                    : GridView.builder(
+                        padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
+                        gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                          crossAxisCount: 2,
+                          crossAxisSpacing: 14,
+                          mainAxisSpacing: 14,
+                          childAspectRatio: 3 / 2.7,
+                        ),
+                        itemCount: filteredNotes.length,
+                        itemBuilder: (context, index) {
+                          final note = filteredNotes[index];
+                          
+                          // ✅ Warna Berdasarkan Status
+                          Color statusColor = theme.colorScheme.primary;
+                          Color cardBg = isDark ? theme.colorScheme.surfaceVariant.withOpacity(0.4) : Colors.white;
+                          
+                          if (note.isFinished) {
+                            statusColor = Colors.green;
+                            cardBg = isDark ? Colors.green.withOpacity(0.15) : Colors.green[50]!;
+                          } else if (note.status == 'coming_soon') {
+                            statusColor = Colors.blue;
+                            cardBg = isDark ? Colors.blue.withOpacity(0.15) : Colors.blue[50]!;
+                          }
+
+                          return InkWell(
+                            borderRadius: BorderRadius.circular(20),
+                            onTap: () => Navigator.pushNamed(context, '/detail_film_note', arguments: note.id),
+                            onLongPress: () {
+                              HapticFeedback.mediumImpact();
+                              _showFilmNoteOptions(context, note);
+                            },
+                            child: AnimatedContainer(
+                              duration: const Duration(milliseconds: 200),
+                              decoration: BoxDecoration(
+                                borderRadius: BorderRadius.circular(20),
+                                color: cardBg,
+                                border: Border.all(
+                                  color: statusColor.withOpacity(0.3),
+                                  width: 1,
                                 ),
                               ),
-                              const SizedBox(height: 24),
-                              Text(
-                                "Belum ada koleksi film/drama/donghua",
-                                style: theme.textTheme.titleLarge?.copyWith(
-                                  fontWeight: FontWeight.bold,
-                                  color: isDark ? Colors.white : Colors.black87,
-                                ),
-                              ),
-                              const SizedBox(height: 8),
-                              Padding(
-                                padding: const EdgeInsets.symmetric(horizontal: 40),
-                                child: Text(
-                                  "Catat film/drama/donghua yang sedang kamu tonton agar tidak lupa progresnya!",
-                                  textAlign: TextAlign.center,
-                                  style: theme.textTheme.bodyMedium?.copyWith(
-                                    color: isDark ? Colors.white54 : Colors.black54,
-                                  ),
-                                ),
-                              ),
-                            ],
-                                              )
-                  : GridView.builder(
-                      padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 14,
-                            mainAxisSpacing: 14,
-                            childAspectRatio: 3 / 2.5,
-                          ),
-                      itemCount: filteredNotes.length,
-                      itemBuilder: (context, index) {
-                        final note = filteredNotes[index];
-                        return InkWell(
-                          borderRadius: BorderRadius.circular(20),
-                          onTap: () => Navigator.pushNamed(context, '/detail_film_note', arguments: note.id),
-                          onLongPress: () {
-                            HapticFeedback.mediumImpact();
-                            _showFilmNoteOptions(context, note);
-                          },
-                          child: AnimatedContainer(
-                            duration: const Duration(milliseconds: 200),
-                            decoration: BoxDecoration(
-                              borderRadius: BorderRadius.circular(20),
-                              color: note.isFinished
-                                  ? (isDark ? Colors.green.withOpacity(0.15) : Colors.green[50])
-                                  : (isDark ? theme.colorScheme.surfaceVariant.withOpacity(0.4) : Colors.white),
-                              border: Border.all(
-                                color: note.isFinished 
-                                    ? Colors.green.withOpacity(0.3) 
-                                    : (isDark ? Colors.white10 : Colors.grey.withOpacity(0.2)),
-                                width: 1,
-                              ),
-                            ),
-                            child: ClipRRect(
-                              borderRadius: BorderRadius.circular(20),
-                              child: Stack(
-                                children: [
-                                  Padding(
-                                    padding: const EdgeInsets.all(16),
-                                    child: Column(
-                                      crossAxisAlignment: CrossAxisAlignment.start,
-                                      // KUNCI UTAMA: Mendorong grup atas ke atas, grup bawah ke bawah
-                                      mainAxisAlignment: MainAxisAlignment.spaceBetween, 
-                                      children: [
-                                        // --- GRUP ATAS: JUDUL & TAHUN ---
-                                        Column(
-                                          crossAxisAlignment: CrossAxisAlignment.start,
-                                          children: [
-                                            Text(
-                                              note.title,
-                                              style: theme.textTheme.titleMedium?.copyWith(
-                                                fontWeight: FontWeight.bold,
-                                                letterSpacing: -0.5,
-                                                color: isDark ? Colors.white : Colors.black87,
-                                              ),
-                                              maxLines: 2,
-                                              overflow: TextOverflow.ellipsis,
-                                            ),
-                                            const SizedBox(height: 4),
-                                            Container(
-                                              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
-                                              decoration: BoxDecoration(
-                                                color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
-                                                borderRadius: BorderRadius.circular(8),
-                                              ),
-                                              child: Text(
-                                                "${note.year}",
-                                                style: theme.textTheme.labelSmall?.copyWith(
-                                                  fontWeight: FontWeight.w600,
-                                                  color: isDark ? Colors.white70 : Colors.black54,
+                              child: ClipRRect(
+                                borderRadius: BorderRadius.circular(20),
+                                child: Stack(
+                                  children: [
+                                    Padding(
+                                      padding: const EdgeInsets.all(16),
+                                      child: Column(
+                                        crossAxisAlignment: CrossAxisAlignment.start,
+                                        mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                        children: [
+                                          // --- GRUP ATAS ---
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Text(
+                                                note.title,
+                                                style: theme.textTheme.titleMedium?.copyWith(
+                                                  fontWeight: FontWeight.bold,
+                                                  letterSpacing: -0.5,
+                                                  color: isDark ? Colors.white : Colors.black87,
                                                 ),
+                                                maxLines: 2,
+                                                overflow: TextOverflow.ellipsis,
                                               ),
-                                            ),
-                                          ],
-                                        ),
-
-                                        // --- GRUP BAWAH: EPISODE & PROGRESS BAR ---
-                                        Column(
-                                          children: [
-                                            Row(
-                                              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                                              children: [
-                                                Text(
-                                                  "Eps: ${note.episodeWatched}/${note.totalEpisodes ?? '?'}",
-                                                  style: theme.textTheme.bodySmall?.copyWith(
-                                                    fontWeight: FontWeight.w500,
-                                                    color: isDark ? Colors.white60 : Colors.black45,
+                                              const SizedBox(height: 4),
+                                              Container(
+                                                padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                                                decoration: BoxDecoration(
+                                                  color: statusColor.withOpacity(0.1),
+                                                  borderRadius: BorderRadius.circular(8),
+                                                ),
+                                                child: Text(
+                                                  "${note.year}",
+                                                  style: theme.textTheme.labelSmall?.copyWith(
+                                                    fontWeight: FontWeight.w700,
+                                                    color: statusColor,
                                                   ),
                                                 ),
-                                                if (note.isFinished)
-                                                  const Icon(Icons.check_circle_rounded, color: Colors.green, size: 18),
-                                              ],
-                                            ),
-                                            const SizedBox(height: 6),
-                                            // Bar ini sekarang aman karena dibungkus dalam grup bawah
-                                            if (!note.isFinished)
-                                              ClipRRect(
-                                                borderRadius: BorderRadius.circular(10),
-                                                child: LinearProgressIndicator(
-                                                  value: (note.totalEpisodes != null && note.totalEpisodes! > 0)
-                                                      ? note.episodeWatched / note.totalEpisodes!
-                                                      : 0,
-                                                  backgroundColor: isDark ? Colors.white10 : Colors.grey[200],
-                                                  color: theme.colorScheme.primary,
-                                                  minHeight: 6,
-                                                ),
                                               ),
-                                          ],
-                                        ),
-                                      ],
-                                    ),
-                                  ),
-                                  // Pin Indicator (Positioned)
-                                  if (note.isPinned)
-                                    Positioned(
-                                      top: 0,
-                                      right: 0,
-                                      child: Container(
-                                        padding: const EdgeInsets.all(4),
-                                        decoration: BoxDecoration(
-                                          color: Colors.amber.withOpacity(0.2),
-                                          borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(12)),
-                                        ),
-                                        child: const Icon(Icons.push_pin_rounded, color: Colors.amber, size: 14),
+                                            ],
+                                          ),
+
+                                          // --- GRUP BAWAH ---
+                                          Column(
+                                            crossAxisAlignment: CrossAxisAlignment.start,
+                                            children: [
+                                              Row(
+                                                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                                children: [
+                                                  Text(
+                                                    note.status == 'coming_soon' 
+                                                        ? "Coming Soon" 
+                                                        : "Eps: ${note.episodeWatched}/${note.totalEpisodes ?? '?'}",
+                                                    style: theme.textTheme.bodySmall?.copyWith(
+                                                      fontWeight: FontWeight.w600,
+                                                      color: isDark ? Colors.white60 : Colors.black54,
+                                                    ),
+                                                  ),
+                                                  if (note.isFinished)
+                                                    const Icon(Icons.check_circle_rounded, color: Colors.green, size: 16),
+                                                  if (note.status == 'coming_soon')
+                                                    const Icon(Icons.auto_awesome_rounded, color: Colors.blue, size: 16),
+                                                ],
+                                              ),
+                                              const SizedBox(height: 6),
+                                              if (!note.isFinished && note.status != 'coming_soon')
+                                                ClipRRect(
+                                                  borderRadius: BorderRadius.circular(10),
+                                                  child: LinearProgressIndicator(
+                                                    value: (note.totalEpisodes != null && note.totalEpisodes! > 0)
+                                                        ? note.episodeWatched / note.totalEpisodes!
+                                                        : 0,
+                                                    backgroundColor: isDark ? Colors.white10 : Colors.grey[200],
+                                                    color: statusColor,
+                                                    minHeight: 6,
+                                                  ),
+                                                ),
+                                            ],
+                                          ),
+                                        ],
                                       ),
                                     ),
-                                ],
+                                    if (note.isPinned)
+                                      Positioned(
+                                        top: 0,
+                                        right: 0,
+                                        child: Container(
+                                          padding: const EdgeInsets.all(4),
+                                          decoration: BoxDecoration(
+                                            color: Colors.amber.withOpacity(0.2),
+                                            borderRadius: const BorderRadius.only(bottomLeft: Radius.circular(12)),
+                                          ),
+                                          child: const Icon(Icons.push_pin_rounded, color: Colors.amber, size: 14),
+                                        ),
+                                      ),
+                                  ],
+                                ),
                               ),
                             ),
-                          ),
-                        );
-                      },
-                    ),
+                          );
+                        },
+                      ),
+              ),
+            ],
+          );
+        },
+      );
+    }
+
+    Widget _buildEmptyState(ThemeData theme, bool isDark) {
+      return Column(
+        mainAxisAlignment: MainAxisAlignment.center,
+        children: [
+          Container(
+            padding: const EdgeInsets.all(32),
+            decoration: BoxDecoration(
+              color: theme.colorScheme.primary.withOpacity(0.05),
+              shape: BoxShape.circle,
             ),
-          ],
-        );
-      },
-    );
+            child: Icon(
+              Icons.movie_filter_rounded,
+              size: 80,
+              color: theme.colorScheme.primary.withOpacity(0.4),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Text(
+            "Tidak ditemukan",
+            style: theme.textTheme.titleLarge?.copyWith(
+              fontWeight: FontWeight.bold,
+              color: isDark ? Colors.white : Colors.black87,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Text(
+            "Coba gunakan filter atau kata kunci lain.",
+            style: theme.textTheme.bodyMedium?.copyWith(
+              color: isDark ? Colors.white54 : Colors.black54,
+            ),
+          ),
+        ],
+      );
+    }
   }
-}
 
 class MaintenanceScreen extends StatelessWidget {
   final String message;
