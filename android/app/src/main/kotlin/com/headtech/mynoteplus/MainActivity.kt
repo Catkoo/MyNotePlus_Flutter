@@ -1,5 +1,8 @@
 package com.headtech.mynoteplus
 
-import io.flutter.embedding.android.FlutterActivity
+// Gunakan FlutterFragmentActivity agar dialog sidik jari bisa muncul
+import io.flutter.embedding.android.FlutterFragmentActivity
 
-class MainActivity : FlutterActivity()
+class MainActivity: FlutterFragmentActivity() {
+    // Biarkan kosong saja, Flutter akan menangani sisanya
+}

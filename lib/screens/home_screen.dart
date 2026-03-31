@@ -572,6 +572,7 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
   final TextEditingController _searchController = TextEditingController();
   String _searchQuery = "";
 
+  // --- UI: DIALOG PIN YANG LEBIH CANTIK ---
   void _showPinDialog(
     BuildContext context,
     String correctPin,
@@ -581,36 +582,75 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
 
     showDialog(
       context: context,
-      builder: (_) {
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
         return AlertDialog(
-          shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(16),
+          backgroundColor: isDark ? const Color(0xFF1E1E1E) : Colors.white,
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24)),
+          title: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Colors.blue.withOpacity(0.1),
+                  shape: BoxShape.circle,
+                ),
+                child: const Icon(Icons.lock_outline, color: Colors.blue, size: 28),
+              ),
+              const SizedBox(height: 16),
+              const Text("Masukkan PIN", style: TextStyle(fontWeight: FontWeight.bold, fontSize: 20)),
+            ],
           ),
-          title: const Text("Masukkan PIN"),
-          content: TextField(
-            controller: controller,
-            obscureText: true,
-            maxLength: 4,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(hintText: "4-digit PIN"),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            children: [
+              const Text("Catatan ini dilindungi", textAlign: TextAlign.center, style: TextStyle(color: Colors.grey)),
+              const SizedBox(height: 20),
+              TextField(
+                controller: controller,
+                obscureText: true,
+                maxLength: 4,
+                textAlign: TextAlign.center,
+                keyboardType: TextInputType.number,
+                style: const TextStyle(fontSize: 24, letterSpacing: 16, fontWeight: FontWeight.bold),
+                decoration: InputDecoration(
+                  counterText: "",
+                  hintText: "••••",
+                  filled: true,
+                  fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                  border: OutlineInputBorder(
+                    borderRadius: BorderRadius.circular(16),
+                    borderSide: BorderSide.none,
+                  ),
+                ),
+              ),
+            ],
           ),
+          actionsAlignment: MainAxisAlignment.spaceEvenly,
           actions: [
             TextButton(
               onPressed: () => Navigator.pop(context),
-              child: const Text("Batal"),
+              child: const Text("Batal", style: TextStyle(color: Colors.grey)),
             ),
             ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.blue,
+                foregroundColor: Colors.white,
+                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                padding: const EdgeInsets.symmetric(horizontal: 32),
+              ),
               onPressed: () {
                 if (controller.text == correctPin) {
                   Navigator.pop(context);
                   onSuccess();
                 } else {
-                  ScaffoldMessenger.of(
-                    context,
-                  ).showSnackBar(const SnackBar(content: Text("PIN salah")));
+                  HapticFeedback.vibrate();
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text("PIN salah!", textAlign: TextAlign.center), backgroundColor: Colors.redAccent),
+                  );
                 }
               },
-              child: const Text("OK"),
+              child: const Text("Buka"),
             ),
           ],
         );
@@ -618,103 +658,75 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
     );
   }
 
+  // --- UI: BOTTOM SHEET OPTIONS YANG MODERN ---
   void _showNoteOptions(BuildContext context, Note note) {
     showModalBottomSheet(
       context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return SafeArea(
+      backgroundColor: Colors.transparent, // Agar background transparan
+      builder: (context) {
+        final isDark = Theme.of(context).brightness == Brightness.dark;
+        return Container(
+          margin: const EdgeInsets.all(16),
           child: Column(
             mainAxisSize: MainAxisSize.min,
             children: [
-              ListTile(
-                leading: Icon(
-                  note.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+              // Group 1: Actions
+              Container(
+                decoration: BoxDecoration(
+                  color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                  borderRadius: BorderRadius.circular(20),
                 ),
-                title: Text(note.isPinned ? 'Lepas Pin' : 'Pin Catatan'),
-                onTap: () {
-                  Provider.of<NoteViewModel>(
-                    context,
-                    listen: false,
-                  ).togglePin(note.id, !note.isPinned);
-                  Navigator.pop(context);
-                },
-              ),
-              ListTile(
-                leading: Icon(note.isLocked ? Icons.lock_open : Icons.lock),
-                title: Text(note.isLocked ? 'Buka Kunci' : 'Kunci dengan PIN'),
-                onTap: () async {
-                  Navigator.pop(context);
-
-                  final pinController = TextEditingController();
-                  final result = await showDialog<String>(
-                    context: context,
-                    builder: (_) => AlertDialog(
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(16),
-                      ),
-                      title: Text(
-                        note.isLocked ? "Buka Kunci" : "Atur PIN (4 angka)",
-                      ),
-                      content: TextField(
-                        controller: pinController,
-                        obscureText: true,
-                        maxLength: 4,
-                        keyboardType: TextInputType.number,
-                        decoration: const InputDecoration(
-                          hintText: "Masukkan PIN",
-                        ),
-                      ),
-                      actions: [
-                        TextButton(
-                          onPressed: () => Navigator.pop(context),
-                          child: const Text("Batal"),
-                        ),
-                        ElevatedButton(
-                          onPressed: () {
-                            final pin = pinController.text.trim();
-                            if (!note.isLocked && pin.length != 4) {
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text("PIN harus 4 angka"),
-                                ),
-                              );
-                              return;
-                            }
-                            Navigator.pop(context, note.isLocked ? "" : pin);
-                          },
-                          child: Text(note.isLocked ? "Buka" : "Kunci"),
-                        ),
-                      ],
+                child: Column(
+                  children: [
+                    _buildMenuAction(
+                      icon: note.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                      title: note.isPinned ? 'Lepas Pin' : 'Sematkan Catatan',
+                      color: Colors.orange,
+                      onTap: () {
+                        Provider.of<NoteViewModel>(context, listen: false).togglePin(note.id, !note.isPinned);
+                        Navigator.pop(context);
+                      },
                     ),
-                  );
-
-                  if (result != null) {
-                    await Provider.of<NoteViewModel>(
-                      context,
-                      listen: false,
-                    ).setNotePin(note.id, result.isEmpty ? null : result);
-                  }
-                },
+                    const Divider(height: 1),
+                    _buildMenuAction(
+                      icon: note.isLocked ? Icons.lock_open : Icons.lock,
+                      title: note.isLocked ? 'Hapus Kunci PIN' : 'Kunci Catatan',
+                      color: Colors.blue,
+                      onTap: () async {
+                        Navigator.pop(context);
+                        _handleLockAction(context, note);
+                      },
+                    ),
+                    const Divider(height: 1),
+                    _buildMenuAction(
+                      icon: Icons.delete_outline,
+                      title: 'Hapus Catatan',
+                      color: Colors.redAccent,
+                      onTap: () {
+                        Navigator.pop(context);
+                        _showDeleteConfirmation(context, note);
+                      },
+                    ),
+                  ],
+                ),
               ),
-              ListTile(
-                leading: const Icon(Icons.delete),
-                title: const Text('Hapus Catatan'),
-                onTap: () {
-                  Provider.of<NoteViewModel>(
-                    context,
-                    listen: false,
-                  ).deleteNote(note.id);
-                  Navigator.pop(context);
-                },
-              ),
-              const Divider(),
-              ListTile(
-                leading: const Icon(Icons.close),
-                title: const Text('Batal'),
+              const SizedBox(height: 12),
+              // Group 2: Cancel
+              GestureDetector(
                 onTap: () => Navigator.pop(context),
+                child: Container(
+                  width: double.infinity,
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  decoration: BoxDecoration(
+                    color: isDark ? const Color(0xFF2C2C2C) : Colors.white,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: const Text(
+                    "Batal",
+                    textAlign: TextAlign.center,
+                    style: TextStyle(fontWeight: FontWeight.bold, fontSize: 16),
+                  ),
+                ),
               ),
             ],
           ),
@@ -723,29 +735,159 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
     );
   }
 
-    Color _getNoteColor(int index, bool isDark) {
-    // Daftar warna pastel untuk mode terang
-    final lightColors = [
-      const Color(0xFFE3F2FD), // Biru muda
-      const Color(0xFFF1F8E9), // Hijau muda
-      const Color(0xFFFFF3E0), // Oranye muda
-      const Color(0xFFFCE4EC), // Pink muda
-      const Color(0xFFF3E5F5), // Ungu muda
-    ];
+  // Widget Helper untuk Baris Menu
+  Widget _buildMenuAction({required IconData icon, required String title, required Color color, required VoidCallback onTap}) {
+    return ListTile(
+      leading: Icon(icon, color: color),
+      title: Text(title, style: const TextStyle(fontWeight: FontWeight.w500)),
+      onTap: onTap,
+    );
+  }
 
-    // Daftar warna gelap yang elegan untuk mode gelap
-    final darkColors = [
-      const Color(0xFF1A237E).withOpacity(0.3), // Dark Blue
-      const Color(0xFF1B5E20).withOpacity(0.3), // Dark Green
-      const Color(0xFF4E342E).withOpacity(0.3), // Dark Brown
-      const Color(0xFF311B92).withOpacity(0.3), // Dark Purple
-    ];
+  // --- LOGIC: PERINGATAN HAPUS ---
+  void _showDeleteConfirmation(BuildContext context, Note note) {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+        title: const Text("Hapus Catatan?"),
+        content: const Text("Catatan yang dihapus tidak dapat dikembalikan."),
+        actions: [
+          TextButton(onPressed: () => Navigator.pop(context), child: const Text("Batal")),
+          TextButton(
+            onPressed: () {
+              Provider.of<NoteViewModel>(context, listen: false).deleteNote(note.id);
+              Navigator.pop(context);
+            },
+            child: const Text("Hapus", style: TextStyle(color: Colors.redAccent, fontWeight: FontWeight.bold)),
+          ),
+        ],
+      ),
+    );
+  }
 
-    if (isDark) {
-      return darkColors[index % darkColors.length];
-    } else {
-      return lightColors[index % lightColors.length];
+// --- LOGIC: ATUR/BUKA PIN (FIXED ERROR NULL CHECK) ---
+  Future<void> _handleLockAction(BuildContext context, Note note) async {
+    final pinController = TextEditingController();
+    final isDark = Theme.of(context).brightness == Brightness.dark;
+
+    // Simpan Navigator state sebelum masuk ke builder
+    final navigator = Navigator.of(context);
+
+    final result = await showDialog<String>(
+      context: context,
+      builder: (dialogContext) => AlertDialog( // Gunakan dialogContext di sini
+        backgroundColor: isDark ? const Color(0xFF252525) : Colors.white,
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(28)),
+        title: Column(
+          children: [
+            Icon(
+              note.isLocked ? Icons.lock_open_rounded : Icons.lock_outline_rounded,
+              color: Colors.blueAccent,
+              size: 40,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              note.isLocked ? "Hapus Kunci PIN" : "Atur PIN Baru",
+              style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 18),
+            ),
+          ],
+        ),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Text(
+              "Gunakan 4 angka untuk keamanan catatanmu",
+              textAlign: TextAlign.center,
+              style: TextStyle(fontSize: 12, color: Colors.grey),
+            ),
+            const SizedBox(height: 20),
+            TextField(
+              controller: pinController,
+              obscureText: true,
+              maxLength: 4,
+              textAlign: TextAlign.center,
+              autofocus: true,
+              keyboardType: TextInputType.number,
+              style: const TextStyle(fontSize: 24, letterSpacing: 10, fontWeight: FontWeight.bold),
+              decoration: InputDecoration(
+                counterText: "",
+                hintText: "••••",
+                filled: true,
+                fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(15),
+                  borderSide: BorderSide.none,
+                ),
+              ),
+            ),
+          ],
+        ),
+        actionsPadding: const EdgeInsets.fromLTRB(10, 0, 10, 10),
+        actions: [
+          Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 10),
+                child: SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton(
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.blueAccent,
+                      foregroundColor: Colors.white,
+                      elevation: 0,
+                      padding: const EdgeInsets.symmetric(vertical: 15),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                    ),
+                    onPressed: () {
+                      final pin = pinController.text.trim();
+                      if (pin.length == 4) {
+                        // Gunakan navigator yang sudah disimpan atau dialogContext
+                        Navigator.of(dialogContext).pop(note.isLocked ? "" : pin);
+                      } else {
+                        HapticFeedback.vibrate();
+                      }
+                    },
+                    child: Text(
+                      note.isLocked ? "Konfirmasi & Buka" : "Simpan PIN",
+                      style: const TextStyle(fontWeight: FontWeight.bold),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 8),
+              // FIX: Gunakan dialogContext agar Navigator tidak bingung mencari state
+              TextButton(
+                style: TextButton.styleFrom(
+                  minimumSize: const Size(double.infinity, 50), // Supaya lebar & mudah diklik
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(15)),
+                ),
+                onPressed: () => Navigator.of(dialogContext).pop(),
+                child: const Text(
+                  'Batal',
+                  style: TextStyle(
+                    color: Colors.redAccent, // Tulisan jadi Merah
+                    fontWeight: FontWeight.bold, // Tebal
+                    fontSize: 16,
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+
+    if (result != null) {
+      await Provider.of<NoteViewModel>(context, listen: false)
+          .setNotePin(note.id, result.isEmpty ? null : result);
     }
+  }
+
+  Color _getNoteColor(int index, bool isDark) {
+    final lightColors = [const Color(0xFFE3F2FD), const Color(0xFFF1F8E9), const Color(0xFFFFF3E0), const Color(0xFFFCE4EC), const Color(0xFFF3E5F5)];
+    final darkColors = [const Color(0xFF1A237E).withOpacity(0.3), const Color(0xFF1B5E20).withOpacity(0.3), const Color(0xFF4E342E).withOpacity(0.3), const Color(0xFF311B92).withOpacity(0.3)];
+    return isDark ? darkColors[index % darkColors.length] : lightColors[index % lightColors.length];
   }
 
   @override
@@ -755,25 +897,15 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
 
     return Consumer<NoteViewModel>(
       builder: (context, viewModel, _) {
-        final allNotes = viewModel.notes;
-        final filteredNotes =
-            allNotes
-                .where(
-                  (note) =>
-                      note.title.toLowerCase().contains(
-                        _searchQuery.toLowerCase(),
-                      ) ||
-                      note.content.toLowerCase().contains(
-                        _searchQuery.toLowerCase(),
-                      ),
-                )
-                .toList()
-              ..sort((a, b) {
-                if (a.isPinned != b.isPinned) {
-                  return b.isPinned ? 1 : -1;
-                }
-                return b.lastEdited.compareTo(a.lastEdited);
-              });
+        final filteredNotes = viewModel.notes
+            .where((note) =>
+                note.title.toLowerCase().contains(_searchQuery.toLowerCase()) ||
+                note.content.toLowerCase().contains(_searchQuery.toLowerCase()))
+            .toList()
+          ..sort((a, b) {
+            if (a.isPinned != b.isPinned) return b.isPinned ? 1 : -1;
+            return b.lastEdited.compareTo(a.lastEdited);
+          });
 
         return Column(
           children: [
@@ -783,21 +915,12 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
               child: TextField(
                 controller: _searchController,
                 onChanged: (value) => setState(() => _searchQuery = value),
-                  decoration: InputDecoration(
-                    hintText: "Cari catatan...",
-                    hintStyle: TextStyle(color: isDark ? Colors.white38 : Colors.black38),
-                    prefixIcon: Icon(Icons.search_rounded, color: theme.colorScheme.primary),
-                    filled: true,
-                    fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
-                    contentPadding: const EdgeInsets.symmetric(vertical: 0), // Biar lebih ramping
-                    border: OutlineInputBorder(
-                      borderRadius: BorderRadius.circular(16),
-                      borderSide: BorderSide.none,
-                    ),
-                  ),
-                style: TextStyle(
-                  color: isDark ? Colors.white : Colors.black87,
-                  fontSize: 16,
+                decoration: InputDecoration(
+                  hintText: "Cari catatan...",
+                  prefixIcon: const Icon(Icons.search_rounded),
+                  filled: true,
+                  fillColor: isDark ? Colors.white.withOpacity(0.05) : Colors.grey[100],
+                  border: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide.none),
                 ),
               ),
             ),
@@ -805,52 +928,27 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
             // 📝 Notes Grid
             Expanded(
               child: filteredNotes.isEmpty
-                  ? Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.note_alt_outlined,
-                          size: 64,
-                          color: isDark ? Colors.white24 : Colors.black26,
-                        ),
-                        const SizedBox(height: 12),
-                        Text(
-                          "Belum ada catatan",
-                          style: theme.textTheme.titleMedium?.copyWith(
-                            color: isDark ? Colors.white60 : Colors.black54,
-                          ),
-                        ),
-                      ],
-                    )
+                  ? const Center(child: Text("Belum ada catatan"))
                   : GridView.builder(
                       padding: const EdgeInsets.fromLTRB(16, 8, 16, 120),
-                      gridDelegate:
-                          const SliverGridDelegateWithFixedCrossAxisCount(
-                            crossAxisCount: 2,
-                            crossAxisSpacing: 14,
-                            mainAxisSpacing: 14,
-                            childAspectRatio: 0.95,
-                          ),
+                      gridDelegate: const SliverGridDelegateWithFixedCrossAxisCount(
+                        crossAxisCount: 2,
+                        crossAxisSpacing: 14,
+                        mainAxisSpacing: 14,
+                        childAspectRatio: 0.95,
+                      ),
                       itemCount: filteredNotes.length,
                       itemBuilder: (context, index) {
                         final note = filteredNotes[index];
                         return InkWell(
-                          borderRadius: BorderRadius.circular(20),
+                          borderRadius: BorderRadius.circular(24),
                           onTap: () {
                             if (note.isLocked) {
                               _showPinDialog(context, note.pin!, () {
-                                Navigator.pushNamed(
-                                  context,
-                                  '/detail_note',
-                                  arguments: note.id,
-                                );
+                                Navigator.pushNamed(context, '/detail_note', arguments: note.id);
                               });
                             } else {
-                              Navigator.pushNamed(
-                                context,
-                                '/detail_note',
-                                arguments: note.id,
-                              );
+                              Navigator.pushNamed(context, '/detail_note', arguments: note.id);
                             }
                           },
                           onLongPress: () {
@@ -860,93 +958,34 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
                           child: Container(
                             padding: const EdgeInsets.all(16),
                             decoration: BoxDecoration(
-                              // Menggunakan fungsi getNoteColor yang kita bahas sebelumnya
-                              color: _getNoteColor(index, isDark), 
+                              color: _getNoteColor(index, isDark),
                               borderRadius: BorderRadius.circular(24),
-                              border: Border.all(
-                                color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05),
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: isDark ? Colors.black26 : Colors.grey.withOpacity(0.1),
-                                  blurRadius: 10,
-                                  offset: const Offset(0, 4),
-                                ),
-                              ],
+                              border: Border.all(color: isDark ? Colors.white10 : Colors.black.withOpacity(0.05)),
                             ),
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                // --- HEADER: TANGGAL & STATUS ---
                                 Row(
                                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                                   children: [
+                                    Text("${note.lastEdited.day}/${note.lastEdited.month}", style: const TextStyle(fontSize: 10, color: Colors.grey)),
                                     Row(
                                       children: [
-                                        Icon(
-                                          Icons.access_time_rounded,
-                                          size: 10,
-                                          color: isDark ? Colors.white38 : Colors.black38,
-                                        ),
-                                        const SizedBox(width: 4),
-                                        Text(
-                                          "${note.lastEdited.day}/${note.lastEdited.month}",
-                                          style: TextStyle(
-                                            fontSize: 10,
-                                            fontWeight: FontWeight.bold,
-                                            color: isDark ? Colors.white38 : Colors.black38,
-                                          ),
-                                        ),
-                                      ],
-                                    ),
-                                    Row(
-                                      children: [
-                                        if (note.isPinned)
-                                          const Icon(Icons.push_pin_rounded, size: 14, color: Colors.orange),
-                                        if (note.isLocked)
-                                          const Padding(
-                                            padding: EdgeInsets.only(left: 4),
-                                            child: Icon(Icons.lock_rounded, size: 14, color: Colors.redAccent),
-                                          ),
+                                        if (note.isPinned) const Icon(Icons.push_pin_rounded, size: 14, color: Colors.orange),
+                                        if (note.isLocked) const Icon(Icons.lock_rounded, size: 14, color: Colors.redAccent),
                                       ],
                                     ),
                                   ],
                                 ),
                                 const SizedBox(height: 12),
-
-                                // --- BODY: JUDUL ---
-                                Text(
-                                  note.title,
-                                  style: theme.textTheme.titleMedium?.copyWith(
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 16,
-                                    color: isDark ? Colors.white : Colors.black87,
-                                  ),
-                                  maxLines: 1,
-                                  overflow: TextOverflow.ellipsis,
-                                ),
+                                Text(note.title, style: const TextStyle(fontWeight: FontWeight.bold, fontSize: 16), maxLines: 1, overflow: TextOverflow.ellipsis),
                                 const SizedBox(height: 6),
-
-                                // --- BODY: ISI CATATAN ---
                                 Expanded(
                                   child: Text(
                                     note.isLocked ? "Konten ini terkunci..." : note.content,
-                                    style: theme.textTheme.bodySmall?.copyWith(
-                                      height: 1.4,
-                                      color: isDark ? Colors.white70 : Colors.black54,
-                                    ),
+                                    style: TextStyle(fontSize: 12, color: isDark ? Colors.white70 : Colors.black54),
                                     maxLines: 4,
                                     overflow: TextOverflow.ellipsis,
-                                  ),
-                                ),
-
-                                // --- FOOTER: DEKORASI ---
-                                Align(
-                                  alignment: Alignment.bottomRight,
-                                  child: Icon(
-                                    Icons.more_horiz,
-                                    size: 16,
-                                    color: isDark ? Colors.white24 : Colors.black12,
                                   ),
                                 ),
                               ],
@@ -962,7 +1001,6 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
     );
   }
 }
-
   class FilmNotesContent extends StatefulWidget {
     const FilmNotesContent({super.key});
 
@@ -975,48 +1013,68 @@ class _PersonalNotesContentState extends State<PersonalNotesContent> {
     String _searchQuery = "";
     String _selectedStatus = "Semua"; // State untuk filter status
 
-    void _showFilmNoteOptions(BuildContext context, FilmNote note) {
+void _showFilmNoteOptions(BuildContext context, FilmNote note) {
       showModalBottomSheet(
         context: context,
+        backgroundColor: Theme.of(context).cardColor, // Mengikuti tema card
         shape: const RoundedRectangleBorder(
-          borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+          borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
         ),
-        builder: (_) {
+        builder: (bottomSheetContext) {
           return SafeArea(
-            child: Column(
-              mainAxisSize: MainAxisSize.min,
-              children: [
-                ListTile(
-                  leading: Icon(
-                    note.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+            child: Padding(
+              padding: const EdgeInsets.symmetric(vertical: 10),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  // --- OPSI ATAS ---
+                  ListTile(
+                    leading: Icon(
+                      note.isPinned ? Icons.push_pin_outlined : Icons.push_pin,
+                      color: Colors.amber,
+                    ),
+                    title: Text(note.isPinned ? 'Lepas Pin' : 'Pin Catatan'),
+                    onTap: () {
+                      Provider.of<FilmNoteViewModel>(context, listen: false)
+                          .togglePin(note.id, !note.isPinned);
+                      Navigator.pop(bottomSheetContext);
+                    },
                   ),
-                  title: Text(note.isPinned ? 'Lepas Pin' : 'Pin Catatan'),
-                  onTap: () {
-                    Provider.of<FilmNoteViewModel>(
-                      context,
-                      listen: false,
-                    ).togglePin(note.id, !note.isPinned);
-                    Navigator.pop(context);
-                  },
-                ),
-                ListTile(
-                  leading: const Icon(Icons.delete, color: Colors.red),
-                  title: const Text('Hapus Catatan', style: TextStyle(color: Colors.red)),
-                  onTap: () {
-                    Provider.of<FilmNoteViewModel>(
-                      context,
-                      listen: false,
-                    ).deleteNote(note.id);
-                    Navigator.pop(context);
-                  },
-                ),
-                const Divider(),
-                ListTile(
-                  leading: const Icon(Icons.close),
-                  title: const Text('Batal'),
-                  onTap: () => Navigator.pop(context),
-                ),
-              ],
+                  ListTile(
+                    leading: const Icon(Icons.delete_outline_rounded, color: Colors.red),
+                    title: const Text('Hapus Catatan', style: TextStyle(color: Colors.red)),
+                    onTap: () {
+                      Provider.of<FilmNoteViewModel>(context, listen: false)
+                          .deleteNote(note.id);
+                      Navigator.pop(bottomSheetContext);
+                    },
+                  ),
+
+                  const SizedBox(height: 10),
+                  
+                  // --- TOMBOL BATAL (Sama dengan Personal Note) ---
+                  Padding(
+                    padding: const EdgeInsets.symmetric(horizontal: 16),
+                    child: TextButton(
+                      style: TextButton.styleFrom(
+                        minimumSize: const Size(double.infinity, 50),
+                        shape: RoundedRectangleBorder(
+                          borderRadius: BorderRadius.circular(15),
+                        ),
+                      ),
+                      onPressed: () => Navigator.pop(bottomSheetContext),
+                      child: const Text(
+                        'Batal',
+                        style: TextStyle(
+                          color: Colors.redAccent,
+                          fontWeight: FontWeight.bold,
+                          fontSize: 16,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
             ),
           );
         },

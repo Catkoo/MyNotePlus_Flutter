@@ -3,6 +3,8 @@ import 'package:flutter/material.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:google_fonts/google_fonts.dart';
+import 'package:local_auth/local_auth.dart';
+import 'package:shared_preferences/shared_preferences.dart'; // <--- TAMBAHAN
 import '../utils/device_helper.dart';
 import '../utils/version_helper.dart';
 
@@ -16,11 +18,11 @@ class SplashScreen extends StatefulWidget {
 class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderStateMixin {
   late AnimationController _controller;
   late Animation<double> _animation;
+  final LocalAuthentication auth = LocalAuthentication();
 
   @override
   void initState() {
     super.initState();
-    // Animasi fade-in untuk logo
     _controller = AnimationController(
       duration: const Duration(seconds: 1),
       vsync: this,
@@ -37,7 +39,35 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
     super.dispose();
   }
 
-  // --- LOGIC TETAP SAMA ---
+  // --- FUNGSI BIOMETRIK DENGAN PENGECEKAN STATUS ON/OFF ---
+  Future<bool> _authenticateUser() async {
+    try {
+      // Cek apakah user mengaktifkan biometrik di setingan profil
+      final prefs = await SharedPreferences.getInstance();
+      bool isBiometricEnabled = prefs.getBool('biometric_enabled') ?? false;
+
+      // Jika di setingan OFF, langsung kembalikan true (izinkan masuk)
+      if (!isBiometricEnabled) return true;
+
+      bool canCheck = await auth.canCheckBiometrics;
+      bool isSupported = await auth.isDeviceSupported();
+
+      if (canCheck || isSupported) {
+        return await auth.authenticate(
+          localizedReason: 'Verifikasi identitas untuk membuka MyNotePlus',
+          options: const AuthenticationOptions(
+            stickyAuth: true,
+            biometricOnly: true,
+          ),
+        );
+      }
+      return true; 
+    } catch (e) {
+      debugPrint("Biometric Error: $e");
+      return true; 
+    }
+  }
+
   Future<void> _handleStartupLogic() async {
     final version = await getAppVersion();
     final isXiaomi = await isXiaomiOrPoco();
@@ -66,9 +96,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
   }
 
   Future<void> _checkAppStatus() async {
-    await Future.delayed(const Duration(milliseconds: 2000));
+    await Future.delayed(const Duration(milliseconds: 1500));
+    
     final doc = await FirebaseFirestore.instance.collection('app_config').doc('status').get();
-
     final isMaintenance = doc.data()?['maintenance_mode'] ?? false;
     final message = doc.data()?['maintenance_message'] ?? "Sedang dalam pemeliharaan.";
 
@@ -88,14 +118,9 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
         await user.reload();
       } on FirebaseAuthException catch (e) {
         if (e.code == 'user-not-found') {
-          // ✅ benar-benar dihapus
           await handleAccountIssue(context, isDeleted: true);
         } else if (e.code == 'user-disabled') {
-          // ✅ di-disable di Firebase Auth
           await handleAccountIssue(context, isDeleted: false);
-        } else {
-          // ⚠️ error lain (jangan langsung logout!)
-          debugPrint('Reload error: ${e.code}');
         }
         return;
       }
@@ -108,16 +133,42 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
       final isDisabled = userDoc.data()?['disabled'] ?? false;
 
       if (isDisabled) {
-        // 🚫 AKUN DISABLE
         await handleAccountIssue(context, isDeleted: false);
         return;
       }
 
-      // ✅ NORMAL
-      Navigator.pushReplacementNamed(context, '/home');
+      // Jalankan verifikasi (akan otomatis lolos jika di profil statusnya OFF)
+      bool isAuthenticated = await _authenticateUser();
+      
+      if (isAuthenticated) {
+        if (!mounted) return;
+        Navigator.pushReplacementNamed(context, '/home');
+      } else {
+        _showAuthRetryDialog();
+      }
     } else {
       Navigator.pushReplacementNamed(context, '/login');
     }
+  }
+
+  void _showAuthRetryDialog() {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: const Text("Keamanan Diperlukan"),
+        content: const Text("Silakan scan sidik jari Anda untuk melanjutkan ke aplikasi."),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+              _checkAppStatus(); 
+            },
+            child: const Text("Coba Lagi"),
+          ),
+        ],
+      ),
+    );
   }
 
   @override
@@ -132,7 +183,7 @@ class _SplashScreenState extends State<SplashScreen> with SingleTickerProviderSt
             children: [
               Image.asset(
                 'lib/assets/icon/mynoteplus.png',
-                width: 180, // Ukuran lebih proporsional
+                width: 180,
                 height: 180,
               ),
               const SizedBox(height: 24),
@@ -158,7 +209,7 @@ class MaintenanceScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final theme = Theme.of(context);
+    // FIX WARNING 1: Menghapus variable 'theme' yang tidak terpakai
     return Scaffold(
       body: Container(
         width: double.infinity,
@@ -174,11 +225,11 @@ class MaintenanceScreen extends StatelessWidget {
           child: Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              // Ilustrasi Maintenance yang lebih estetik
               Container(
                 padding: const EdgeInsets.all(30),
                 decoration: BoxDecoration(
-                  color: Colors.white.withOpacity(0.05),
+                  // FIX WARNING 2: Ganti withOpacity ke withValues
+                  color: Colors.white.withValues(alpha: 0.05),
                   shape: BoxShape.circle,
                 ),
                 child: const Icon(
@@ -208,11 +259,11 @@ class MaintenanceScreen extends StatelessWidget {
                 textAlign: TextAlign.center,
               ),
               const SizedBox(height: 50),
-              // Tombol placeholder agar user merasa tenang
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 12),
                 decoration: BoxDecoration(
-                  border: Border.all(color: Colors.amberAccent.withOpacity(0.5)),
+                  // FIX WARNING 3: Ganti withOpacity ke withValues
+                  border: Border.all(color: Colors.amberAccent.withValues(alpha: 0.5)),
                   borderRadius: BorderRadius.circular(30),
                 ),
                 child: Row(
@@ -251,18 +302,11 @@ Future<void> handleAccountIssue(
   required bool isDeleted,
 }) async {
   await FirebaseAuth.instance.signOut();
-
   if (!context.mounted) return;
-
-  Navigator.pushNamedAndRemoveUntil(
-    context,
-    '/login',
-    (route) => false,
-  );
+  Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
 
   Future.delayed(const Duration(milliseconds: 300), () {
     if (!context.mounted) return;
-
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
         content: Text(
@@ -272,9 +316,7 @@ Future<void> handleAccountIssue(
         ),
         backgroundColor: isDeleted ? Colors.red : Colors.orange,
         behavior: SnackBarBehavior.floating,
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
-        ),
+        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
       ),
     );
   });
